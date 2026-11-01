@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Travel Talk Speaking Studio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass:wght@600;800&display=swap">
+<style>
+/* Layout: one working column; two tabs (shadowing, full check-in); every activity is listen → record → compare */
+:root{
+  --paper:#F2F5F7; --surface:#FFFFFF; --sunk:#E8EEF2; --ink:#142B3E; --muted:#56697B; --line:#D3DCE3;
+  --accent:#0B7F79; --accent-tint:#E3F3F2; --signal:#F5B700; --rec:#C0392B; --ok:#1E7F47; --miss:#9AA7B3;
+  --f-display:"Overpass",Arial,sans-serif; --f-body:"Atkinson Hyperlegible","Segoe UI",Verdana,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0D161F; --surface:#15212C; --sunk:#1B2935; --ink:#E4ECF2; --muted:#9AAEBE; --line:#2A3B4A;
+  --accent:#41C3BA; --accent-tint:#11302F; --signal:#F7C21E; --rec:#F07B69; --ok:#5BC98A; --miss:#5E6E7C; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55}
+.wrap{max-width:860px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-left)) 60px max(16px,env(safe-area-inset-right))}
+h1,h2,h3{font-family:var(--f-display);line-height:1.2;margin:0}
+h1{font-size:1.7rem}h2{font-size:1.25rem}h3{font-size:1.05rem}
+p{margin:0}
+.muted{color:var(--muted)}.small{font-size:.9rem}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 12px;font:600 1rem var(--f-display);color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--signal)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 14px;border-radius:8px;font:700 .95rem var(--f-body);cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.rec{background:var(--rec);border-color:var(--rec);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+.lines{display:flex;flex-direction:column;gap:6px}
+.line{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer;font:inherit;color:inherit}
+.line[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-tint)}
+.target{font-size:1.25rem;font-weight:700}
+.live{min-height:2.2em;padding:8px 10px;background:var(--sunk);border-radius:8px}
+.live.on{outline:2px solid var(--rec)}
+.w-ok{color:var(--ok);font-weight:700}.w-miss{color:var(--miss);text-decoration:underline dotted}
+audio{width:100%;max-width:100%}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.grid2>*{min-width:0}
+.mline{display:flex;gap:8px;padding:4px 0;border-bottom:1px dotted var(--line);font-size:.95rem}
+.mline b{font-size:.75rem;color:var(--muted);width:24px;flex:none;padding-top:3px}
+.mline i{margin-left:auto;font-style:normal;font-size:.72rem;color:var(--accent);white-space:nowrap;padding-top:3px}
+.check{display:flex;gap:8px;align-items:flex-start}.check input{margin-top:5px;width:18px;height:18px}
+.note{border-left:3px solid var(--signal);padding:4px 0 4px 12px;color:var(--muted);font-size:.92rem}
+.tag{font-size:.72rem;font-weight:700;padding:1px 6px;border:1px solid currentColor;border-radius:4px}
+.warn{background:#FFF4CF;color:#3a2c00;padding:10px 12px;border-radius:8px}
+@media (prefers-color-scheme:dark){.warn{background:#3A2F0A;color:#F7E7B0}}
+textarea{width:100%;min-height:90px;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
+.timer{font-variant-numeric:tabular-nums;font-weight:700;color:var(--rec)}
+</style>
+</head>
+<body>
+<div class="wrap stack">
+  <header class="stack" style="gap:6px">
+    <p class="small muted">Travel Talk English · Unit 1 · Checking in</p>
+    <h1>Speaking Studio</h1>
+    <p>Listen to the model, record yourself, see what we heard, and compare. <span class="tag" style="color:var(--accent)">L-C</span> <span class="tag" style="color:var(--muted)">L-Int</span></p>
+  </header>
+  <div id="support"></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-shadow" aria-selected="true">1 · Shadowing</button>
+    <button role="tab" id="tab-full" aria-selected="false">2 · Full check-in</button>
+  </div>
+
+  <!-- ============ Shadowing ============ -->
+  <section id="p-shadow" class="stack">
+    <p class="note">Step 3 of the unit. Pick a line, listen, then record yourself saying it. The words we heard turn green. Speech recognition is not perfect, so use it as a guide, and trust your ears when you compare.</p>
+    <div class="lines" id="lines"></div>
+    <div class="panel stack">
+      <p class="small muted">Say this:</p>
+      <p class="target" id="target"></p>
+      <div class="row">
+        <button class="btn" id="play-model">▶ Model</button>
+        <button class="btn" id="play-slow">▶ Slow</button>
+        <button class="btn rec" id="rec-shadow">● Record</button>
+        <span class="timer" id="t-shadow"></span>
+      </div>
+      <div class="live" id="live-shadow" aria-live="polite"></div>
+      <div id="result-shadow" class="stack" hidden>
+        <p id="score-shadow"></p>
+        <div class="grid2">
+          <div class="stack" style="gap:4px"><p class="small muted">Your recording</p><audio id="mine-shadow" controls></audio></div>
+          <div class="stack" style="gap:4px"><p class="small muted">Model</p><button class="btn" id="model-then-me">▶ Model, then me</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Full check-in ============ -->
+  <section id="p-full" class="stack" hidden>
+    <p class="note">Step 6 of the unit. Record your whole check-in: do it again with a classmate or the AI partner on speaker, or say the guest's part on your own. Then compare it with the model and tick what you did.</p>
+    <div class="panel stack">
+      <h3>Your goal this time</h3>
+      <div class="stack" style="gap:6px" id="goals"></div>
+    </div>
+    <div class="panel stack">
+      <div class="row"><button class="btn rec" id="rec-full">● Start recording</button><span class="timer" id="t-full"></span></div>
+      <p class="small muted">Up to 3 minutes. What we hear appears below as you speak.</p>
+      <div class="live" id="live-full" aria-live="polite" style="min-height:4em"></div>
+    </div>
+    <div id="result-full" class="stack" hidden>
+      <div class="grid2">
+        <div class="panel stack" style="gap:8px"><h3>You</h3><audio id="mine-full" controls></audio>
+          <label class="small muted" for="tr-full">What we heard (fix any words we got wrong):</label>
+          <textarea id="tr-full"></textarea></div>
+        <div class="panel stack" style="gap:8px"><h3>Model</h3><audio id="model-full" controls></audio><div id="model-lines"></div></div>
+      </div>
+      <div class="panel stack">
+        <h3>Where did your meaning get through? Tick what you did.</h3>
+        <div id="checklist" class="stack" style="gap:6px"></div>
+      </div>
+      <div class="panel stack">
+        <h3>Keep it and get feedback</h3>
+        <div class="row">
+          <button class="btn primary" id="dl-full">⬇ Save my recording</button>
+          <button class="btn" id="copy-full">Copy goal, transcript and checklist</button>
+        </div>
+        <p class="small muted">Put the recording in your portfolio. Paste the copied text into the AI Coach and ask: "Coach, please."</p>
+        <div class="row" id="links"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="small muted stack" style="gap:4px">
+    <p>Works best in Chrome or Edge. Your recording stays on this device unless you save and share it. Speech-to-text is done by your browser's speech service.</p>
+  </footer>
+</div>
+
+<script>
+/* ===== Edit these after you upload your audio files and links ===== */
+const CONFIG={
+  lines:[
+    {text:'So, a double room for three nights, right?', audio:'audio/U1_A2_1_normal.mp3', slow:'audio/U1_A2_1_slow.mp3'},
+    {text:'Sorry, could you say the room number again?', audio:'audio/U1_A2_2_normal.mp3', slow:'audio/U1_A2_2_slow.mp3'},
+    {text:'Five-one-two. Thank you.', audio:'audio/U1_A2_3_normal.mp3', slow:'audio/U1_A2_3_slow.mp3'},
+    {text:'So, check-out is at eleven, is that right?', audio:'audio/U1_A2_4_normal.mp3', slow:'audio/U1_A2_4_slow.mp3'},
+    {text:'I think there\'s a mistake with my booking.', audio:'audio/U1_A5_p08.mp3', slow:''},
+    {text:'Could I leave my bags here?', audio:'audio/U1_A5_p06.mp3', slow:''}
+  ],
+  modelAudio:'audio/U1_A4_model.mp3',
+  model:[
+    ['G','Good afternoon. I have a reservation under the name Chen.','introduce'],
+    ['R','Welcome. Let me check… I\'m sorry, your room is not ready yet.',''],
+    ['G','Sorry, could you say that again, please?','clarify'],
+    ['R','Your room isn\'t ready. It\'ll be ready at four p.m.',''],
+    ['G','I see. Could I leave my bags here?','polite request'],
+    ['R','Of course. We can keep them for you.',''],
+    ['G','Thank you. So my room is ready at four, is that right?','confirm'],
+    ['R','Yes, that\'s right. Room three-oh-five.',''],
+    ['G','Great. And what time is breakfast?','extra question'],
+    ['R','From seven to ten, in the restaurant.',''],
+    ['G','Thank you very much for your help.','close politely']
+  ],
+  links:[
+    {label:'Ask the AI Coach', url:''},          // paste your Gem or AI Studio app link
+    {label:'Flag AI feedback', url:''},          // paste your Google Form link
+    {label:'Back to the course', url:''}         // paste your Google Sites link
+  ]
+};
+const GOALS=['Use two clarification phrases','Explain a problem politely','Confirm key details by repeating them'];
+const CHECK=['I greeted the receptionist and gave my name.','I explained the problem clearly.','I asked for clarification when something was unclear.','I confirmed the important details (time, room, price).','My requests sounded polite (please, could you, thank you).'];
+
+/* ===== helpers ===== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const canRecord=!!(navigator.mediaDevices&&window.MediaRecorder);
+if(!canRecord||!SR){$('support').innerHTML=`<div class="warn">${!canRecord?'This browser cannot record audio here. ':''}${!SR?'Live speech-to-text is not available in this browser, so you can record and listen but not see your words. ':''}For everything, open this page in Chrome or Edge.</div>`}
+
+/* play an audio file; if it is missing, read the text with the browser voice */
+let current=null;
+function stopAll(){if(current){current.pause();current=null}try{speechSynthesis.cancel()}catch(e){}}
+function play(src,text,rate=0.9){
+  stopAll();
+  return new Promise(res=>{
+    const speak=()=>{try{const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=rate;u.onend=res;u.onerror=res;speechSynthesis.speak(u)}catch(e){res()}};
+    if(!src){speak();return}
+    const a=new Audio(src);current=a;a.onended=res;a.onerror=()=>{current=null;speak()};a.play().catch(()=>{current=null;speak()});
+  });
+}
+
+/* recorder + live transcript (both from one microphone stream) */
+function makeSession({liveEl,timerEl,maxSec,onDone}){
+  let stream,rec,chunks=[],sr,finalText='',t0,tick,stopping=false;
+  async function start(){
+    stopAll();
+    try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}
+    catch(e){liveEl.textContent='We could not use your microphone ('+e.name+'). Allow the microphone in the address bar, then try again.';return false}
+    chunks=[];finalText='';stopping=false;
+    rec=new MediaRecorder(stream);rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    rec.onstop=()=>{stream.getTracks().forEach(x=>x.stop());const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});onDone(blob,finalText.trim())};
+    rec.start();
+    if(SR){
+      sr=new SR();sr.lang='en-US';sr.continuous=true;sr.interimResults=true;
+      sr.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)finalText+=t+' ';else interim+=t}liveEl.innerHTML=esc(finalText)+'<span class="muted">'+esc(interim)+'</span>'};
+      sr.onend=()=>{if(!stopping){try{sr.start()}catch(e){}}};
+      sr.onerror=()=>{};
+      try{sr.start()}catch(e){}
+    }else liveEl.textContent='Recording… (no live text in this browser)';
+    liveEl.classList.add('on');t0=Date.now();
+    tick=setInterval(()=>{const s=Math.floor((Date.now()-t0)/1000);timerEl.textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;if(s>=maxSec)stop()},250);
+    return true;
+  }
+  function stop(){if(stopping)return;stopping=true;clearInterval(tick);liveEl.classList.remove('on');try{sr&&sr.stop()}catch(e){};setTimeout(()=>{try{rec&&rec.state!=='inactive'&&rec.stop()}catch(e){}},400)}
+  return {start,stop,get active(){return rec&&rec.state==='recording'&&!stopping}};
+}
+
+/* ===== tabs ===== */
+function tab(which){$('tab-shadow').setAttribute('aria-selected',which==='shadow');$('tab-full').setAttribute('aria-selected',which==='full');$('p-shadow').hidden=which!=='shadow';$('p-full').hidden=which!=='full';stopAll()}
+$('tab-shadow').onclick=()=>tab('shadow');$('tab-full').onclick=()=>tab('full');
+if(location.hash==='#full')tab('full');
+
+/* ===== shadowing ===== */
+let sel=0,mineURL=null;
+function renderLines(){
+  $('lines').innerHTML=CONFIG.lines.map((l,i)=>`<button class="line" aria-pressed="${i===sel}" data-i="${i}">${esc(l.text)}</button>`).join('');
+  document.querySelectorAll('.line').forEach(b=>b.onclick=()=>{sel=+b.dataset.i;renderLines();resetShadow()});
+  $('target').textContent=CONFIG.lines[sel].text;
+}
+function resetShadow(){$('live-shadow').textContent='';$('result-shadow').hidden=true;$('t-shadow').textContent=''}
+const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/five-one-two/g,'512').replace(/[^a-z0-9' ]+/g,' ').split(/\s+/).filter(Boolean);
+const NUM={'512':['five','one','two','512','5','1','2'],'check':['check','checkout','check-out'],'eleven':['11','eleven'],'three':['3','three']};
+function compare(target,heard){
+  const h=new Set(norm(heard));
+  const words=target.split(/(\s+)/);let hit=0,total=0;
+  const html=words.map(w=>{if(/^\s+$/.test(w))return w;const k=norm(w)[0];if(!k)return esc(w);total++;
+    const alts=NUM[k]||[k];const ok=alts.some(a=>h.has(a));if(ok)hit++;return `<span class="${ok?'w-ok':'w-miss'}">${esc(w)}</span>`}).join('');
+  return {html,hit,total};
+}
+const shadow=makeSession({liveEl:$('live-shadow'),timerEl:$('t-shadow'),maxSec:20,onDone:(blob,text)=>{
+  $('rec-shadow').textContent='● Record';
+  if(mineURL)URL.revokeObjectURL(mineURL);mineURL=URL.createObjectURL(blob);$('mine-shadow').src=mineURL;
+  const c=compare(CONFIG.lines[sel].text,text);
+  $('target').innerHTML=c.html;
+  $('score-shadow').innerHTML=SR?(text?`We heard <b>${c.hit} of ${c.total}</b> words. ${c.hit===c.total?'Excellent!':'Grey words: listen to the model and try again.'}`:'We could not hear any words. Speak a little closer to the microphone.'):'Listen to your recording and compare it with the model.';
+  $('result-shadow').hidden=false;
+}});
+$('rec-shadow').onclick=async()=>{if(shadow.active){shadow.stop();return}$('target').textContent=CONFIG.lines[sel].text;$('result-shadow').hidden=true;if(await shadow.start())$('rec-shadow').textContent='■ Stop'};
+$('play-model').onclick=()=>play(CONFIG.lines[sel].audio,CONFIG.lines[sel].text,0.95);
+$('play-slow').onclick=()=>play(CONFIG.lines[sel].slow,CONFIG.lines[sel].text,0.7);
+$('model-then-me').onclick=async()=>{await play(CONFIG.lines[sel].audio,CONFIG.lines[sel].text,0.95);const a=$('mine-shadow');a.currentTime=0;a.play().catch(()=>{})};
+renderLines();
+
+/* ===== full check-in ===== */
+$('goals').innerHTML=GOALS.map((g,i)=>`<label class="check"><input type="radio" name="goal" value="${i}" ${i===0?'checked':''}><span>${g}</span></label>`).join('');
+$('checklist').innerHTML=CHECK.map((c,i)=>`<label class="check"><input type="checkbox" id="ck${i}"><span>${c}</span></label>`).join('');
+$('model-lines').innerHTML=CONFIG.model.map(([s,t,a])=>`<div class="mline"><b>${s==='G'?'G':'R'}</b><span>${esc(t)}</span>${a?`<i>${a}</i>`:''}</div>`).join('');
+$('model-full').src=CONFIG.modelAudio;
+$('model-full').onerror=()=>{$('model-full').replaceWith(Object.assign(document.createElement('button'),{className:'btn',textContent:'▶ Play model (computer voice)',onclick:()=>play('',CONFIG.model.map(m=>m[1]).join(' '),0.9)}))};
+$('links').innerHTML=CONFIG.links.filter(l=>l.url).map(l=>`<a class="btn" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('');
+let fullBlob=null,fullURL=null;
+const full=makeSession({liveEl:$('live-full'),timerEl:$('t-full'),maxSec:180,onDone:(blob,text)=>{
+  $('rec-full').textContent='● Record again';fullBlob=blob;
+  if(fullURL)URL.revokeObjectURL(fullURL);fullURL=URL.createObjectURL(blob);$('mine-full').src=fullURL;
+  $('tr-full').value=text;$('result-full').hidden=false;$('result-full').scrollIntoView({behavior:'smooth',block:'start'});
+}});
+$('rec-full').onclick=async()=>{if(full.active){full.stop();return}if(await full.start())$('rec-full').textContent='■ Stop recording'};
+$('dl-full').onclick=()=>{if(!fullBlob)return;const ext=(fullBlob.type.includes('mp4')?'m4a':'webm');const a=document.createElement('a');a.href=fullURL;a.download=`my-check-in-${new Date().toISOString().slice(0,10)}.${ext}`;document.body.appendChild(a);a.click();a.remove()};
+$('copy-full').onclick=async()=>{
+  const g=GOALS[+document.querySelector('input[name=goal]:checked').value];
+  const ticks=CHECK.map((c,i)=>($('ck'+i).checked?'[x] ':'[ ] ')+c).join('\n');
+  const txt=`My goal: ${g}\n\nMy check-in (transcript):\n${$('tr-full').value}\n\nMy checklist:\n${ticks}`;
+  try{await navigator.clipboard.writeText(txt);$('copy-full').textContent='Copied ✓'}catch(e){$('tr-full').select();$('copy-full').textContent='Press Ctrl+C to copy'}
+  setTimeout(()=>$('copy-full').textContent='Copy goal, transcript and checklist',2500);
+};
+</script>
+</body>
+</html>
