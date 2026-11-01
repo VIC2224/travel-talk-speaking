@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRIP Microphone Check</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass:wght@600;800&display=swap">
+<style>
+:root{--paper:#F2F5F7;--surface:#FFFFFF;--sunk:#E8EEF2;--ink:#142B3E;--muted:#56697B;--line:#D3DCE3;--accent:#0B7F79;--rec:#C0392B;--ok:#1E7F47;--okbg:#E5F2E9;--warnbg:#FFF4CF;--warn:#6B4A00}
+@media (prefers-color-scheme:dark){:root{--paper:#0D161F;--surface:#15212C;--sunk:#1B2935;--ink:#E4ECF2;--muted:#9AAEBE;--line:#2A3B4A;--accent:#41C3BA;--rec:#F07B69;--ok:#5BC98A;--okbg:#142B1D;--warnbg:#3A2F0A;--warn:#F7E7B0;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Atkinson Hyperlegible","Segoe UI",Verdana,sans-serif;font-size:17px;line-height:1.55}
+.wrap{max-width:620px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-left)) 48px max(16px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:16px}
+h1{font-family:"Overpass",Arial,sans-serif;font-size:1.7rem;margin:0;line-height:1.2}
+p{margin:0}
+.muted{color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.say{font-size:1.3rem;font-weight:700}
+.btn{border:0;border-radius:8px;padding:12px 22px;font:700 1rem inherit;font-family:inherit;cursor:pointer;color:#fff;background:var(--rec);align-self:flex-start}
+.live{min-height:2.4em;padding:10px 12px;background:var(--sunk);border-radius:8px}
+.live.on{outline:2px solid var(--rec)}
+.ok{background:var(--okbg);color:var(--ok);padding:12px 14px;border-radius:8px;font-weight:700}
+.warn{background:var(--warnbg);color:var(--warn);padding:12px 14px;border-radius:8px}
+audio{width:100%}
+:focus-visible{outline:3px solid #F5B700;outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="muted">TRIP · Tech check</p>
+  <h1>Check your microphone</h1>
+  <div class="panel">
+    <p>Press the button, then say:</p>
+    <p class="say">"I have a reservation."</p>
+    <button class="btn" id="rec">● Start</button>
+    <div class="live" id="live" aria-live="polite"></div>
+    <div id="result"></div>
+    <audio id="play" controls hidden></audio>
+  </div>
+  <p class="muted" style="font-size:.9rem">Works best in Chrome or Edge. Nothing is saved: your recording stays on this device.</p>
+</div>
+<script>
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const live=document.getElementById('live'),result=document.getElementById('result'),btn=document.getElementById('rec'),player=document.getElementById('play');
+let stream,rec,sr,chunks=[],text='',busy=false,timer;
+function done(){
+  const heard=text.trim();
+  if(heard){result.innerHTML='<div class="ok">✓ Your microphone works. You can close this tab and go back to TRIP.</div>'}
+  else if(!SR){result.innerHTML='<div class="ok">✓ Your microphone records. (This browser cannot show your words; use Chrome or Edge for that.) You can close this tab and go back to TRIP.</div>'}
+  else{result.innerHTML='<div class="warn">We could not hear any words. Speak a little closer to the microphone and press Start again. If it still does not work, check that no other app is using your microphone.</div>'}
+}
+async function start(){
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e){result.innerHTML='<div class="warn">We could not use your microphone. Click the microphone or lock icon in the address bar, choose Allow, then reload this page.</div>';return}
+  busy=true;text='';chunks=[];result.innerHTML='';player.hidden=true;btn.textContent='■ Stop';live.classList.add('on');live.textContent='Listening…';
+  rec=new MediaRecorder(stream);rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());player.src=URL.createObjectURL(new Blob(chunks,{type:rec.mimeType||'audio/webm'}));player.hidden=false;done()};
+  rec.start();
+  if(SR){sr=new SR();sr.lang='en-US';sr.interimResults=true;sr.continuous=true;
+    sr.onresult=e=>{let fin='',tmp='';for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t+' ';else tmp+=t}text=fin+tmp;live.textContent=text||'Listening…'};
+    sr.onerror=()=>{};try{sr.start()}catch(e){}}
+  timer=setTimeout(stop,10000);
+}
+function stop(){if(!busy)return;busy=false;clearTimeout(timer);btn.textContent='● Start again';live.classList.remove('on');try{sr&&sr.stop()}catch(e){}setTimeout(()=>{try{rec.state!=='inactive'&&rec.stop()}catch(e){}},400)}
+btn.onclick=()=>busy?stop():start();
+</script>
+</body>
+</html>
