@@ -15,6 +15,7 @@
   --paper:#171512; --surface:#211E1A; --sunk:#2A2621; --ink:#EEE9DF; --muted:#B3AA9C; --line:#3A352E;
   --accent:#F2C94C; --accent-deep:#E0B23A; --accent-tint:#3A3220; --rec:#F07B69; --ok:#6CCB94; --miss:#7D766C; color-scheme:dark}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:Roboto,Arial,sans-serif;font-size:17px;line-height:1.55}
 .wrap{max-width:860px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-left)) 60px max(16px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:16px}
 h1{font-weight:300;font-size:2rem;margin:0;line-height:1.15}
@@ -59,7 +60,7 @@ textarea{width:100%;min-height:90px;font:inherit;color:inherit;background:var(--
 <body>
 <div class="wrap">
   <header class="stack" style="gap:6px">
-    <p class="small muted">TRIP · Unit 1 · Checking in</p>
+    <p class="small muted">TRIP · Unit 1 · Demonstration · Words and phrases</p>
     <h1>Speaking Studio</h1>
     <p class="muted">Listen, say it, see what we understood, and compare with the model.</p>
   </header>
@@ -67,10 +68,7 @@ textarea{width:100%;min-height:90px;font:inherit;color:inherit;background:var(--
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="words" aria-selected="true">Words</button>
     <button role="tab" data-tab="phrases" aria-selected="false">Phrases</button>
-    <button role="tab" data-tab="confirm" aria-selected="false">Confirm</button>
-    <button role="tab" data-tab="full" aria-selected="false">Full check-in</button>
   </div>
-
   <!-- ===== practice deck (words / phrases / confirm) ===== -->
   <section id="p-deck" class="stack">
     <p class="small muted" id="deck-help"></p>
@@ -96,45 +94,10 @@ textarea{width:100%;min-height:90px;font:inherit;color:inherit;background:var(--
     </div>
   </section>
 
-  <!-- ===== full check-in ===== -->
-  <section id="p-full" class="stack" hidden>
-    <p class="small muted">Record your whole check-in: with a classmate, with the AI partner on speaker, or say the guest's part on your own. Then compare it with the model and tick what you did.</p>
-    <div class="panel stack">
-      <h3>Your goal this time</h3>
-      <div class="stack" style="gap:6px" id="goals"></div>
-    </div>
-    <div class="panel stack">
-      <div class="row"><button class="btn rec" id="rec-full">● Start recording</button><span class="timer" id="t-full"></span></div>
-      <p class="small muted">Up to 3 minutes. What we hear appears below as you speak.</p>
-      <div class="live" id="live-full" aria-live="polite" style="min-height:4em"></div>
-    </div>
-    <div id="result-full" class="stack" hidden>
-      <div class="grid2">
-        <div class="panel stack" style="gap:8px"><h3>You</h3><audio id="mine-full" controls></audio>
-          <label class="small muted" for="tr-full">What we heard (fix any words we got wrong):</label>
-          <textarea id="tr-full"></textarea></div>
-        <div class="panel stack" style="gap:8px"><h3>Model</h3><button class="btn" id="model-full">▶ Play the model</button><div id="model-lines"></div></div>
-      </div>
-      <div class="panel stack">
-        <h3>Where did your meaning get through? Tick what you did.</h3>
-        <div id="checklist" class="stack" style="gap:6px"></div>
-      </div>
-      <div class="panel stack">
-        <h3>Keep it and get feedback</h3>
-        <div class="row">
-          <button class="btn primary" id="dl-full">⬇ Save my recording</button>
-          <button class="btn" id="copy-full">Copy goal, transcript and checklist</button>
-        </div>
-        <p class="small muted">Put the recording in your portfolio. Paste the copied text into the AI Coach and say: "Coach, please."</p>
-        <div class="row" id="links"></div>
-      </div>
-    </div>
-  </section>
-
   <footer class="small muted">Works best in Chrome or Edge. Your recordings stay on this device unless you save and share them. Speech-to-text is done by your browser's speech service, so it may miss some words: listen and compare too.</footer>
 </div>
-
 <script>
+
 /* ===== Content: edit here ===== */
 var DECKS = {
   words: {
@@ -240,17 +203,15 @@ function makeSession(o){
   return {start:start, stop:stop, active:function(){ return rec && rec.state === "recording" && !stopping; }};
 }
 
+var START = "words";
 /* ===== tabs ===== */
-var deckName = "words", items = [], sel = 0, done = {};
+var deckName = START, items = [], sel = 0, done = {};
 function showTab(name){
   document.querySelectorAll(".tabs button").forEach(function(b){ b.setAttribute("aria-selected", b.getAttribute("data-tab") === name); });
-  speechSynthesis.cancel();
-  if (name === "full"){ $("p-deck").hidden = true; $("p-full").hidden = false; return; }
-  $("p-deck").hidden = false; $("p-full").hidden = true;
+  try{ speechSynthesis.cancel(); }catch(e){}
   deckName = name; sel = 0; renderDeck();
 }
-document.querySelectorAll(".tabs button").forEach(function(b){ b.onclick = function(){ var n = b.getAttribute("data-tab"); history.replaceState(null, "", "#" + n); showTab(n); }; });
-
+document.querySelectorAll(".tabs button").forEach(function(b){ b.onclick = function(){ showTab(b.getAttribute("data-tab")); }; });
 /* ===== deck ===== */
 function renderDeck(){
   var d = DECKS[deckName]; items = [];
@@ -289,44 +250,7 @@ $("play-model").onclick = function(){ speak(items[sel], $("slow").checked); };
 $("model-then-me").onclick = function(){ speak(items[sel], $("slow").checked).then(function(){ var a = $("mine-deck"); a.currentTime = 0; a.play().catch(function(){}); }); };
 $("next-item").onclick = function(){ sel = (sel + 1) % items.length; renderDeck(); };
 
-/* ===== full check-in ===== */
-$("goals").innerHTML = GOALS.map(function(g, i){ return '<label class="check"><input type="radio" name="goal" value="' + i + '"' + (i === 0 ? " checked" : "") + "><span>" + esc(g) + "</span></label>"; }).join("");
-$("checklist").innerHTML = CHECK.map(function(c, i){ return '<label class="check"><input type="checkbox" id="ck' + i + '"><span>' + esc(c) + "</span></label>"; }).join("");
-$("model-lines").innerHTML = MODEL.map(function(m){ return '<div class="mline"><b>' + m[0] + "</b><span>" + esc(m[1]) + "</span>" + (m[2] ? "<i>" + esc(m[2]) + "</i>" : "") + "</div>"; }).join("");
-$("model-full").onclick = function(){ speak(MODEL.map(function(m){ return m[1]; }).join(" "), false); };
-$("links").innerHTML = LINKS.filter(function(l){ return l.url; }).map(function(l){ return '<a class="btn" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.label) + " ↗</a>"; }).join("");
-var fullBlob = null, fullURL = null;
-var fullSession = makeSession({live:$("live-full"), timer:$("t-full"), max:180, onDone:function(blob, text){
-  $("rec-full").textContent = "● Record again"; fullBlob = blob;
-  if (fullURL) URL.revokeObjectURL(fullURL); fullURL = URL.createObjectURL(blob); $("mine-full").src = fullURL;
-  $("tr-full").value = text; $("result-full").hidden = false; $("result-full").scrollIntoView({behavior:"smooth", block:"start"});
-}});
-$("rec-full").onclick = function(){
-  if (fullSession.active()){ fullSession.stop(); return; }
-  fullSession.start().then(function(ok){ if (ok) $("rec-full").textContent = "■ Stop recording"; });
-};
-$("dl-full").onclick = function(){ if (!fullBlob) return; var ext = fullBlob.type.indexOf("mp4") > -1 ? "m4a" : "webm"; var a = document.createElement("a"); a.href = fullURL; a.download = "my-check-in-" + new Date().toISOString().slice(0,10) + "." + ext; document.body.appendChild(a); a.click(); a.remove(); };
-$("copy-full").onclick = function(){
-  var g = GOALS[+document.querySelector("input[name=goal]:checked").value];
-  var ticks = CHECK.map(function(c, i){ return ($("ck" + i).checked ? "[x] " : "[ ] ") + c; }).join("\n");
-  var txt = "My goal: " + g + "\n\nMy check-in (transcript):\n" + $("tr-full").value + "\n\nMy checklist:\n" + ticks;
-  var btn = $("copy-full");
-  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ btn.textContent = "Copied ✓"; }).catch(function(){ $("tr-full").select(); btn.textContent = "Press Ctrl+C to copy"; });
-  setTimeout(function(){ btn.textContent = "Copy goal, transcript and checklist"; }, 2500);
-};
-
-/* each link opens only the part that belongs to its unit step:
-   #words or #phrases -> Demonstration (Words + Phrases)
-   #confirm          -> Application P1 (Confirm only)
-   #full             -> Application P4 (Full check-in only) */
-var SETS = {words:["words","phrases"], phrases:["words","phrases"], confirm:["confirm"], full:["full"]};
-var STEP = {words:"Demonstration · Words and phrases", phrases:"Demonstration · Words and phrases", confirm:"Application · Listen and act", full:"Application · Compare and get coached"};
-var start = (location.hash || "#words").slice(1);
-if (!SETS[start]) start = "words";
-document.querySelectorAll(".tabs button").forEach(function(b){ b.hidden = SETS[start].indexOf(b.getAttribute("data-tab")) < 0; });
-if (SETS[start].length === 1) document.querySelector(".tabs").hidden = true;
-document.querySelector("header p.small").textContent = "TRIP · Unit 1 · " + STEP[start];
-showTab(start);
+showTab(START);
 </script>
 </body>
 </html>
