@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRIP Speaking Studio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap">
+<style>
+/* Layout: one working column; four tabs (words, phrases, confirm, full check-in); every activity is listen → record → feedback → compare */
+:root{
+  --paper:#FAF7F0; --surface:#FFFFFF; --sunk:#F3EFE6; --ink:#212121; --muted:#5F5A50; --line:#E4DED2;
+  --accent:#FFD54F; --accent-deep:#F2B600; --accent-tint:#FFF6D6; --rec:#C0392B; --ok:#1E7F47; --miss:#9A938A;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#171512; --surface:#211E1A; --sunk:#2A2621; --ink:#EEE9DF; --muted:#B3AA9C; --line:#3A352E;
+  --accent:#F2C94C; --accent-deep:#E0B23A; --accent-tint:#3A3220; --rec:#F07B69; --ok:#6CCB94; --miss:#7D766C; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Roboto,Arial,sans-serif;font-size:17px;line-height:1.55}
+.wrap{max-width:860px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-left)) 60px max(16px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:16px}
+h1{font-weight:300;font-size:2rem;margin:0;line-height:1.15}
+h2{font-weight:400;font-size:1.25rem;margin:0}
+h3{font-weight:500;font-size:1.02rem;margin:0}
+p{margin:0}
+.muted{color:var(--muted)}.small{font-size:.9rem}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.panel{background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;padding:18px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:4px solid transparent;margin-bottom:-2px;padding:10px 12px;font:500 1rem Roboto,Arial,sans-serif;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--accent-deep);background:var(--surface);color:var(--ink);padding:9px 16px;border-radius:8px;font:500 .95rem Roboto,Arial,sans-serif;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#212121}
+.btn.rec{background:var(--rec);border-color:var(--rec);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:7px 13px;border:1.5px solid var(--accent-deep);border-radius:999px;background:var(--surface);font:400 .92rem Roboto,Arial,sans-serif;color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#212121;font-weight:500}
+.chip.done::after{content:" ✓";color:var(--ok);font-weight:500}
+.group{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.target{font-size:1.5rem;font-weight:500;line-height:1.35}
+.live{min-height:2.2em;padding:9px 12px;background:var(--sunk);border-radius:8px}
+.live.on{outline:2px solid var(--rec)}
+.w-ok{color:var(--ok)}.w-miss{color:var(--miss);text-decoration:underline dotted}
+.fb{padding:10px 14px;border-radius:8px;background:var(--accent-tint)}
+audio{width:100%}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.grid2>*{min-width:0}
+.mline{display:flex;gap:8px;padding:5px 0;border-bottom:1px dotted var(--line);font-size:.95rem}
+.mline b{font-size:.75rem;color:var(--muted);width:24px;flex:none;padding-top:3px}
+.mline i{margin-left:auto;font-style:normal;font-size:.72rem;color:#8a6d00;white-space:nowrap;padding-top:3px}
+.check{display:flex;gap:8px;align-items:flex-start}.check input{margin-top:5px;width:18px;height:18px;flex:none}
+.warn{background:var(--accent-tint);padding:10px 12px;border-radius:8px}
+textarea{width:100%;min-height:90px;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
+.timer{font-variant-numeric:tabular-nums;font-weight:500;color:var(--rec)}
+.slow{display:flex;align-items:center;gap:6px;font-size:.9rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="stack" style="gap:6px">
+    <p class="small muted">TRIP · Unit 1 · Application · Compare and get coached</p>
+    <h1>Speaking Studio</h1>
+    <p class="muted">Record your whole check-in, then compare it with the model.</p>
+  </header>
+  <div id="support"></div>
+  <!-- ===== full check-in ===== -->
+  <section id="p-full" class="stack">
+    <p class="small muted">Record your whole check-in: with a classmate, with the AI partner on speaker, or say the guest's part on your own. Then compare it with the model and tick what you did.</p>
+    <div class="panel stack">
+      <h3>Your goal this time</h3>
+      <div class="stack" style="gap:6px" id="goals"></div>
+    </div>
+    <div class="panel stack">
+      <div class="row"><button class="btn rec" id="rec-full">● Start recording</button><span class="timer" id="t-full"></span></div>
+      <p class="small muted">Up to 3 minutes. What we hear appears below as you speak.</p>
+      <div class="live" id="live-full" aria-live="polite" style="min-height:4em"></div>
+    </div>
+    <div id="result-full" class="stack" hidden>
+      <div class="grid2">
+        <div class="panel stack" style="gap:8px"><h3>You</h3><audio id="mine-full" controls></audio>
+          <label class="small muted" for="tr-full">What we heard (fix any words we got wrong):</label>
+          <textarea id="tr-full"></textarea></div>
+        <div class="panel stack" style="gap:8px"><h3>Model</h3><button class="btn" id="model-full">▶ Play the model</button><div id="model-lines"></div></div>
+      </div>
+      <div class="panel stack">
+        <h3>Where did your meaning get through? Tick what you did.</h3>
+        <div id="checklist" class="stack" style="gap:6px"></div>
+      </div>
+      <div class="panel stack">
+        <h3>Keep it and get feedback</h3>
+        <div class="row">
+          <button class="btn primary" id="dl-full">⬇ Save my recording</button>
+          <button class="btn" id="copy-full">Copy goal, transcript and checklist</button>
+        </div>
+        <p class="small muted">Put the recording in your portfolio. Paste the copied text into the AI Coach and say: "Coach, please."</p>
+        <div class="row" id="links"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="small muted">Works best in Chrome or Edge. Your recordings stay on this device unless you save and share them. Speech-to-text is done by your browser's speech service, so it may miss some words: listen and compare too.</footer>
+</div>
+<script>
+
+/* ===== Content: edit here ===== */
+var DECKS = {
+  words: {
+    help: "Choose a word. Listen, then press Record and say it. If we understood you, it turns green.",
+    groups: [
+      ["From the video", ["reservation","book a room","three nights","quiet room","ID","passport","driver's license","deposit","pay","room card","floor"]],
+      ["More useful words", ["single room","double room","twin room","check-out","breakfast included","ready"]]
+    ]
+  },
+  phrases: {
+    help: "Choose a phrase. Listen, then say it. Green words were understood. Grey words: listen again and try once more.",
+    groups: [
+      ["1. Give your reservation", ["I have a reservation under Chen.","I've booked a room for three nights."]],
+      ["2. Check the details", ["So, three nights, is that correct?","Yes, that's correct."]],
+      ["3. Make a polite request", ["Could I have a quiet room, please?","Would it be possible to have a room on a high floor?"]],
+      ["4. Show your ID and pay", ["Here is my passport.","Can I pay by card?","Here you go."]],
+      ["5. Ask someone to repeat", ["Sorry, could you say that again, please?","Sorry, did you say the 24th floor?","Could you speak more slowly, please?"]],
+      ["6. Explain a problem", ["I think there's a mistake with my booking.","I booked a double room, but this is a single.","Here is my confirmation email."]]
+    ]
+  },
+  confirm: {
+    help: "After the listening task: confirm the details out loud, as the guest would.",
+    groups: [
+      ["Confirm what you heard", ["So, a double room for three nights, right?","Sorry, could you say the room number again?","Five-one-two. Thank you.","So, check-out is at eleven, is that right?"]]
+    ]
+  }
+};
+var MODELS = [
+  [["R","Your room is fourteen-oh-eight on the fourteenth floor, breakfast is from six-thirty to nine-thirty, and check-out is at twelve noon. Is there anything else?",""],
+   ["G","Sorry, could you say the breakfast time again, please?","asked when unclear"],
+   ["R","Of course. Breakfast is from six-thirty to nine-thirty.",""],
+   ["G","So, room fourteen-oh-eight, and check-out at twelve, right?","checked details"],
+   ["R","That's right.",""],
+   ["G","Great. Thank you very much.","left with the right details"]],
+  [["R","Thank you, Ms Lee. I have you in a single room for one night.",""],
+   ["G","Sorry, I think there's a mistake.","started politely"],
+   ["G","I booked a double room for two nights. Here's my confirmation email.","said the fact clearly"],
+   ["G","Could you check it, please?","asked for it to be fixed"],
+   ["R","Let me see... You're right, I'm sorry. A double room for two nights.",""],
+   ["G","Thank you so much.",""]],
+  [["R","Is there anything else I can do for you?",""],
+   ["G","Yes. I have an early meeting tomorrow. Could I have a quiet room, please?","asked politely, with a reason"],
+   ["R","I'm sorry, our quiet rooms are full tonight.",""],
+   ["G","I see. Would it be possible to have a room away from the lift?","suggested another option"],
+   ["R","Yes, I can give you a room at the end of the corridor.",""],
+   ["G","That's perfect. Thank you.","got something useful"]]
+];
+var MODEL = MODELS[0];
+var LINKS = [
+  {label:"Ask the AI Coach", url:""},       // paste your Gem link
+  {label:"Flag AI feedback", url:""},       // paste your Flag form link
+  {label:"Back to TRIP", url:""}            // paste your Google Sites link
+];
+var GOALS = ["Leave the desk with every detail you need","Sort out a booking problem politely","Ask for what you want"];
+var CHECKS = [
+  ["I asked when something was fast or unclear.","I checked at least two details by saying them back, on my own.","Every detail I said back was right (or I fixed it)."],
+  ["I started politely (Sorry... / Excuse me... / I think there's a mistake...).","I said the fact clearly (I booked...).","I asked for it to be fixed, and it was fixed."],
+  ["I asked politely (Could I...? / Would it be possible...?).","After the first \"no\", I asked about or suggested another option.","I ended with something useful."]
+];
+var CHECK = CHECKS[0];
+
+/* ===== helpers ===== */
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var canRecord = !!(navigator.mediaDevices && window.MediaRecorder);
+if (!canRecord || !SR) $("support").innerHTML = '<div class="warn">' + (!canRecord ? "This browser cannot record audio here. " : "") + (!SR ? "This browser cannot show your words, so you can record and listen but not see what we understood. " : "") + "For everything, open this page in Chrome or Edge.</div>";
+
+function speak(text, slow){
+  return new Promise(function(res){
+    try{ speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text); u.lang = "en-US"; u.rate = slow ? 0.65 : 0.9; u.onend = res; u.onerror = res; speechSynthesis.speak(u); }
+    catch(e){ res(); }
+  });
+}
+
+/* word matching: understood or not */
+var ALT = {"id":["id","i d","idea","ids"], "512":["512","five","one","two"], "24th":["24th","twentyfourth","twenty","fourth","24"],
+  "eleven":["eleven","11"], "three":["three","3"], "check":["check","checkout","checking"], "out":["out","checkout"], "chen":["chen","chan","shen","chin","jen"],
+  "five":["five","5","512"], "one":["one","1","512"], "two":["two","2","512","to","too"], "thats":["thats","that"], "ive":["ive","i"], "theres":["theres","there"]};
+function norm(s){ return s.toLowerCase().replace(/\./g,"").replace(/[’']/g,"").replace(/-/g," ").replace(/[^a-z0-9 ]+/g," ").split(/\s+/).filter(Boolean); }
+function compare(target, heard){
+  var h = {}; norm(heard).forEach(function(w){ h[w] = 1; });
+  var hit = 0, total = 0;
+  var html = target.split(/(\s+)/).map(function(w){
+    if (/^\s+$/.test(w)) return w;
+    var parts = norm(w); if (!parts.length) return esc(w);
+    var ok = parts.every(function(p){ var alts = ALT[p] || [p]; return alts.some(function(a){ return h[a]; }); });
+    total++; if (ok) hit++;
+    return '<span class="' + (ok ? "w-ok" : "w-miss") + '">' + esc(w) + "</span>";
+  }).join("");
+  return {html:html, hit:hit, total:total};
+}
+
+/* one microphone session: recorder + live transcript */
+function makeSession(o){
+  var stream, rec, chunks = [], sr, finalText = "", t0, tick, stopping = false;
+  function start(){
+    speechSynthesis.cancel();
+    return navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
+      stream = s; chunks = []; finalText = ""; stopping = false;
+      rec = new MediaRecorder(stream);
+      rec.ondataavailable = function(e){ if (e.data.size) chunks.push(e.data); };
+      rec.onstop = function(){ stream.getTracks().forEach(function(x){ x.stop(); }); o.onDone(new Blob(chunks, {type: rec.mimeType || "audio/webm"}), finalText.trim()); };
+      rec.start();
+      if (SR){
+        sr = new SR(); sr.lang = "en-US"; sr.continuous = true; sr.interimResults = true;
+        sr.onresult = function(e){ var interim = ""; for (var i = e.resultIndex; i < e.results.length; i++){ var t = e.results[i][0].transcript; if (e.results[i].isFinal) finalText += t + " "; else interim += t; } o.live.innerHTML = esc(finalText) + '<span class="muted">' + esc(interim) + "</span>"; };
+        sr.onend = function(){ if (!stopping){ try{ sr.start(); }catch(e){} } };
+        sr.onerror = function(){};
+        try{ sr.start(); }catch(e){}
+      } else o.live.textContent = "Recording…";
+      o.live.classList.add("on"); t0 = Date.now();
+      tick = setInterval(function(){ var s = Math.floor((Date.now() - t0) / 1000); o.timer.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); if (s >= o.max) stop(); }, 250);
+      return true;
+    }).catch(function(e){ o.live.textContent = "We could not use your microphone (" + e.name + "). Allow the microphone in the address bar, then try again."; return false; });
+  }
+  function stop(){ if (stopping) return; stopping = true; clearInterval(tick); o.live.classList.remove("on"); try{ sr && sr.stop(); }catch(e){} setTimeout(function(){ try{ rec && rec.state !== "inactive" && rec.stop(); }catch(e){} }, 400); }
+  return {start:start, stop:stop, active:function(){ return rec && rec.state === "recording" && !stopping; }};
+}
+
+/* ===== full check-in ===== */
+$("goals").innerHTML = GOALS.map(function(g, i){ return '<label class="check"><input type="radio" name="goal" value="' + i + '"' + (i === 0 ? " checked" : "") + "><span>" + esc(g) + "</span></label>"; }).join("");
+function drawGoal(){
+  var g = +document.querySelector("input[name=goal]:checked").value;
+  CHECK = CHECKS[g]; MODEL = MODELS[g];
+  $("checklist").innerHTML = CHECK.map(function(c, i){ return '<label class="check"><input type="checkbox" id="ck' + i + '"><span>' + esc(c) + "</span></label>"; }).join("");
+  $("model-lines").innerHTML = MODEL.map(function(m){ return '<div class="mline"><b>' + m[0] + "</b><span>" + esc(m[1]) + "</span>" + (m[2] ? "<i>" + esc(m[2]) + "</i>" : "") + "</div>"; }).join("");
+}
+document.querySelectorAll("input[name=goal]").forEach(function(r){ r.onchange = drawGoal; });
+drawGoal();
+$("model-full").onclick = function(){ speak(MODEL.map(function(m){ return m[1]; }).join(" "), false); };
+$("links").innerHTML = LINKS.filter(function(l){ return l.url; }).map(function(l){ return '<a class="btn" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.label) + " ↗</a>"; }).join("");
+var fullBlob = null, fullURL = null;
+var fullSession = makeSession({live:$("live-full"), timer:$("t-full"), max:180, onDone:function(blob, text){
+  $("rec-full").textContent = "● Record again"; fullBlob = blob;
+  if (fullURL) URL.revokeObjectURL(fullURL); fullURL = URL.createObjectURL(blob); $("mine-full").src = fullURL;
+  $("tr-full").value = text; $("result-full").hidden = false; $("result-full").scrollIntoView({behavior:"smooth", block:"start"});
+}});
+$("rec-full").onclick = function(){
+  if (fullSession.active()){ fullSession.stop(); return; }
+  fullSession.start().then(function(ok){ if (ok) $("rec-full").textContent = "■ Stop recording"; });
+};
+$("dl-full").onclick = function(){ if (!fullBlob) return; var ext = fullBlob.type.indexOf("mp4") > -1 ? "m4a" : "webm"; var a = document.createElement("a"); a.href = fullURL; a.download = "my-check-in-" + new Date().toISOString().slice(0,10) + "." + ext; document.body.appendChild(a); a.click(); a.remove(); };
+$("copy-full").onclick = function(){
+  var g = GOALS[+document.querySelector("input[name=goal]:checked").value];
+  var ticks = CHECK.map(function(c, i){ return ($("ck" + i).checked ? "[x] " : "[ ] ") + c; }).join("\n");
+  var txt = "My goal: " + g + "\n\nMy check-in (transcript):\n" + $("tr-full").value + "\n\nMy checklist:\n" + ticks;
+  var btn = $("copy-full");
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ btn.textContent = "Copied ✓"; }).catch(function(){ $("tr-full").select(); btn.textContent = "Press Ctrl+C to copy"; });
+  setTimeout(function(){ btn.textContent = "Copy goal, transcript and checklist"; }, 2500);
+};
+
+</script>
+</body>
+</html>
