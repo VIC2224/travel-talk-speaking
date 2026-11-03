@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRIP Buddy Inbox</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap">
+<style>
+:root{
+  --paper:#FAF7F0; --surface:#FFFFFF; --sunk:#F3EFE6; --ink:#212121; --muted:#5F5A50; --line:#E4DED2;
+  --accent:#FFD54F; --accent-deep:#F2B600; --accent-tint:#FFF6D6; --rec:#C0392B; --ok:#1E7F47; --err:#B53A2A;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#171512; --surface:#211E1A; --sunk:#2A2621; --ink:#EEE9DF; --muted:#B3AA9C; --line:#3A352E;
+  --accent:#F2C94C; --accent-deep:#E0B23A; --accent-tint:#3A3220; --rec:#F07B69; --ok:#6CCB94; --err:#F07B69; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Roboto,Arial,sans-serif;font-size:17px;line-height:1.55}
+.wrap{max-width:820px;margin:0 auto;padding:22px 16px 60px;display:flex;flex-direction:column;gap:16px}
+h1{font-weight:300;font-size:2rem;margin:0;line-height:1.15}
+h2{font-weight:400;font-size:1.25rem;margin:0}
+p{margin:0}
+.muted{color:var(--muted)}.small{font-size:.9rem}
+.eyebrow{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.panel{background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--accent-deep);background:var(--surface);color:var(--ink);padding:9px 16px;border-radius:8px;font:500 .95rem Roboto,Arial,sans-serif;cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#212121}
+.btn.rec{background:var(--rec);border-color:var(--rec);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;padding:0;font:inherit;font-size:.9rem;color:var(--muted);text-decoration:underline;cursor:pointer}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+input[type=text]{font:inherit;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);text-transform:uppercase;width:12em}
+input[type=text]:focus{outline:none;border-color:var(--accent-deep);box-shadow:0 0 0 3px rgba(255,213,79,.45)}
+.chip{padding:8px 16px;border:1.5px solid var(--accent-deep);border-radius:999px;background:var(--surface);font:400 1rem Roboto,Arial,sans-serif;color:var(--ink);cursor:pointer}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:4px solid transparent;margin-bottom:-2px;padding:10px 12px;font:500 1rem Roboto,Arial,sans-serif;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.role{padding:10px 14px;border-radius:8px;background:var(--accent-tint);font-size:1rem}
+.role b{font-weight:500}
+.card h3{font-weight:500;font-size:1.05rem;margin:0}
+ul.plain{margin:0;padding-left:20px}
+ul.plain li{margin:3px 0}
+.check{display:flex;gap:9px;align-items:flex-start;margin:4px 0}.check input{margin-top:5px;width:18px;height:18px;flex:none;accent-color:var(--accent-deep)}
+.say{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px dotted var(--line)}
+.hear{flex:none;border:0;background:var(--accent);color:#212121;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:11px}
+.msgs{display:flex;flex-direction:column;gap:10px;min-height:40px}
+.bub{max-width:80%;padding:10px 14px;border-radius:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bub.them{background:var(--sunk);align-self:flex-start;border-top-left-radius:4px}
+.bub.me{background:var(--accent-tint);align-self:flex-end;border-top-right-radius:4px}
+.bub .who{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.bub .when{font-size:.8rem;color:var(--muted)}
+.play{border:0;background:var(--accent);color:#212121;border-radius:999px;padding:6px 14px;font:500 .9rem Roboto,Arial,sans-serif;cursor:pointer}
+.empty{padding:10px 14px;border-radius:8px;background:var(--sunk);color:var(--muted)}
+.timer{font-variant-numeric:tabular-nums;font-weight:500;color:var(--rec)}
+.note{padding:10px 14px;border-radius:8px;border-left:5px solid var(--accent-deep);background:var(--accent-tint)}
+.note.ok{border-color:var(--ok)}
+.err{color:var(--err);font-size:.95rem}
+audio{width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">TRIP · Travel buddy</p>
+    <h1>Buddy Inbox</h1>
+  </header>
+
+  <!-- 1. Pair code -->
+  <section class="panel" id="login">
+    <h2>Your pair code</h2>
+    <p class="muted small">Your instructor gives you this code on the Travel buddy page.</p>
+    <form class="row" id="codeForm">
+      <input type="text" id="code" placeholder="e.g. LAKE-07" autocomplete="off" aria-label="Pair code">
+      <button class="btn primary" type="submit">Open</button>
+    </form>
+    <p class="err" id="loginErr"></p>
+  </section>
+
+  <!-- 2. Who are you -->
+  <section class="panel" id="who" hidden>
+    <h2>Who are you?</h2>
+    <div class="row" id="names"></div>
+  </section>
+
+  <!-- 3. Inbox -->
+  <div id="main" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="row" style="justify-content:space-between">
+      <p class="muted small" id="hello"></p>
+      <button class="link" id="switch">Not you? Change</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-ex="1">Exchange 1</button>
+      <button role="tab" aria-selected="false" data-ex="2">Exchange 2</button>
+    </div>
+    <p class="role" id="role"></p>
+
+    <section class="panel card" id="card"></section>
+
+    <section class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2>Messages</h2>
+        <button class="link" id="refresh">↻ Check for new messages</button>
+      </div>
+      <div class="msgs" id="msgs"></div>
+      <audio id="player" hidden></audio>
+    </section>
+
+    <section class="panel" id="standin" hidden>
+      <h2 id="standinTitle">No reply yet?</h2>
+      <p>You can finish this exchange with the AI stand-in buddy.</p>
+      <ol style="margin:0;padding-left:20px">
+        <li>Click <b style="font-weight:500">Copy the card for the AI</b>.</li>
+        <li>Open the AI partner and paste it. Then talk.</li>
+      </ol>
+      <div class="row">
+        <button class="btn primary" id="copyCard">Copy the card for the AI</button>
+        <a class="btn" id="gem" target="_blank" rel="noopener">Open the AI partner ↗</a>
+      </div>
+      <p class="small" id="copyMsg"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Your voice message</h2>
+      <p class="muted small" id="recHint">Speak for up to 90 seconds. You can listen before you send.</p>
+      <div class="row">
+        <button class="btn rec" id="recBtn">● Record</button>
+        <span class="timer" id="timer" hidden>0:00</span>
+      </div>
+      <div id="preview" hidden style="display:flex;flex-direction:column;gap:10px">
+        <audio id="mine" controls></audio>
+        <div class="row">
+          <button class="btn primary" id="send">Send to my buddy</button>
+          <button class="btn" id="again">Record again</button>
+        </div>
+      </div>
+      <p class="small" id="recMsg"></p>
+    </section>
+  </div>
+</div>
+
+<script>
+/* ===== Settings: paste your links here ===== */
+var API = "https://script.google.com/macros/s/AKfycbyhA3s6KwwVS03SceUPfc7fZhGK6QeoZasVW6lMdW7OHM0A2WrnVZuvarX6cd1oCwM/exec";       // Apps Script web app URL (ends with /exec)
+var GEM = "https://gemini.google.com/gem/1ZG4LOsf45sx8mfSG9HnXFF6y1HvjWJC2?usp=sharing";          // TRIP Partner Gem link
+var MIC_CHECK = "check.html";
+var MAX_SEC = 90;
+/* =========================================== */
+
+var S = {code:null, A:"", B:"", me:null, ex:1, cards:null, msgs:[], wait:1440, now:Date.now(), clock:0};
+var cache = {};
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function store(k, v){ try{ if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} }
+function read(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function other(){ return S.me === "A" ? "B" : "A"; }
+function nameOf(x){ return x === "A" ? S.A : S.B; }
+function roleOf(me, ex){ return ((ex === 1) === (me === "A")) ? "traveller" : "host"; }
+
+function get(params){
+  var q = Object.keys(params).map(function(k){ return k + "=" + encodeURIComponent(params[k]); }).join("&");
+  return fetch(API + "?" + q).then(function(r){ return r.json(); }).then(function(d){ if (!d.ok) throw new Error(d.error); return d; });
+}
+function post(body){
+  return fetch(API, {method:"POST", body:JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(d){ if (!d.ok) throw new Error(d.error); return d; });
+}
+
+/* ---- 1. pair code ---- */
+$("codeForm").onsubmit = function(e){ e.preventDefault(); openPair($("code").value.trim()); };
+function openPair(code, me){
+  if (!code) return;
+  $("loginErr").textContent = "Opening...";
+  get({action:"pair", code:code}).then(function(d){
+    S.code = d.code; S.A = d.A; S.B = d.B; S.wait = d.waitMinutes; store("trip_code", d.code);
+    $("loginErr").textContent = "";
+    if (me === "A" || me === "B") return choose(me);
+    $("names").innerHTML = ["A","B"].map(function(x){ return '<button class="chip" data-me="' + x + '">' + esc(nameOf(x)) + "</button>"; }).join("");
+    $("names").querySelectorAll(".chip").forEach(function(b){ b.onclick = function(){ choose(b.getAttribute("data-me")); }; });
+    $("login").hidden = true; $("who").hidden = false;
+  }).catch(function(err){
+    $("loginErr").textContent = API.indexOf("PASTE") === 0 ? "The Inbox is not connected yet (no web app link)." : err.message;
+  });
+}
+
+/* ---- 2. who are you ---- */
+function choose(me){
+  S.me = me; store("trip_me", me);
+  $("login").hidden = true; $("who").hidden = true; $("main").hidden = false;
+  $("hello").textContent = "Hi " + nameOf(me) + "! Your buddy is " + nameOf(other()) + ". Pair " + S.code + ".";
+  $("card").innerHTML = '<p class="muted">Loading your card...</p>';
+  get({action:"cards", code:S.code, me:me}).then(function(d){ S.cards = d.cards; drawCard(); }).catch(function(err){ $("card").innerHTML = '<p class="err">' + esc(err.message) + "</p>"; });
+  loadMsgs();
+}
+$("switch").onclick = function(){
+  store("trip_me", null); store("trip_code", null);
+  S.me = null; $("main").hidden = true; $("login").hidden = false; $("code").value = "";
+};
+
+/* ---- tabs ---- */
+document.querySelectorAll(".tabs button").forEach(function(b){
+  b.onclick = function(){
+    document.querySelectorAll(".tabs button").forEach(function(x){ x.setAttribute("aria-selected", x === b ? "true" : "false"); });
+    S.ex = +b.getAttribute("data-ex"); resetRec(); drawCard(); drawMsgs();
+  };
+});
+
+/* ---- card ---- */
+function drawCard(){
+  var r = roleOf(S.me, S.ex), them = esc(nameOf(other()));
+  $("role").innerHTML = r === "traveller"
+    ? "You are the <b>traveller</b>. " + them + " is the guesthouse host. <b>You start.</b>"
+    : "You are the <b>guesthouse host</b>. " + them + " is the traveller. Wait for their first message, then reply.";
+  if (!S.cards) return;
+  var c = S.cards[S.ex - 1], h = '<p class="eyebrow">Your card · only you can see it</p><h3>' + esc(c.title) + "</h3>";
+  if (c.role === "traveller"){
+    h += "<p>" + esc(c.situation) + "</p><p class=\"eyebrow\" style=\"margin-top:6px\">What you need to do</p>" +
+      c.list.map(function(t){ return '<label class="check"><input type="checkbox"><span>' + esc(t) + "</span></label>"; }).join("");
+  } else {
+    h += '<p class="eyebrow">What you know</p><ul class="plain">' + c.list.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>" +
+      '<p class="eyebrow" style="margin-top:6px">Sentences you can use</p><div>' +
+      c.phrases.map(function(t){ return '<div class="say"><button class="hear" data-t="' + esc(t) + '" aria-label="Listen">▶</button><span>' + esc(t) + "</span></div>"; }).join("") + "</div>";
+  }
+  $("card").innerHTML = h;
+}
+document.addEventListener("click", function(e){
+  var h = e.target.closest(".hear"); if (!h) return;
+  try{ speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(h.getAttribute("data-t")); u.lang = "en-GB"; u.rate = 0.9; speechSynthesis.speak(u); }catch(x){}
+});
+
+/* ---- messages ---- */
+function loadMsgs(quiet){
+  if (!S.code) return;
+  if (!quiet) $("msgs").innerHTML = '<p class="muted">Loading messages...</p>';
+  get({action:"messages", code:S.code}).then(function(d){ S.msgs = d.messages; S.now = d.now; S.clock = Date.now(); drawMsgs(); })
+    .catch(function(err){ $("msgs").innerHTML = '<p class="err">' + esc(err.message) + "</p>"; });
+}
+function nowServer(){ return S.now + (Date.now() - S.clock); }
+function ago(t){
+  var m = Math.max(0, Math.round((nowServer() - t) / 60000));
+  if (m < 1) return "just now"; if (m < 60) return m + " min ago";
+  var h = Math.round(m / 60); if (h < 24) return h + " h ago";
+  var d = Math.round(h / 24); return d + (d === 1 ? " day ago" : " days ago");
+}
+function drawMsgs(){
+  var list = S.msgs.filter(function(m){ return m.ex === S.ex; }), traveller = roleOf(S.me, S.ex) === "traveller";
+  if (!list.length){
+    $("msgs").innerHTML = '<p class="empty">' + (traveller ? "No messages yet. You start: send your first voice message below."
+      : "No messages yet. " + esc(nameOf(other())) + " starts. Their message will appear here.") + "</p>";
+  } else {
+    $("msgs").innerHTML = list.map(function(m){
+      var mine = m.from === S.me;
+      return '<div class="bub ' + (mine ? "me" : "them") + '"><span class="who">' + (mine ? "You" : esc(nameOf(m.from))) + '</span>' +
+        '<button class="play" data-id="' + esc(m.id) + '">▶ Play' + (m.sec ? " (" + m.sec + "s)" : "") + '</button><span class="when">' + ago(m.t) + "</span></div>";
+    }).join("");
+  }
+  // host must wait for the traveller's first message
+  var canRec = traveller || list.some(function(m){ return m.from !== S.me; });
+  $("recBtn").disabled = !canRec;
+  $("recHint").textContent = canRec ? "Speak for up to 90 seconds. You can listen before you send." : "You can reply after " + nameOf(other()) + " sends the first message.";
+  // stand-in
+  var last = list[list.length - 1];
+  var waited = last && last.from === S.me ? (nowServer() - last.t) / 60000 : 0;
+  $("standin").hidden = !(last && last.from === S.me && waited >= S.wait);
+  $("standinTitle").textContent = nameOf(other()) + " hasn't replied yet.";
+}
+$("refresh").onclick = function(){ loadMsgs(); };
+setInterval(function(){ if (S.me && !document.hidden && !rec) loadMsgs(true); }, 30000);
+
+$("msgs").addEventListener("click", function(e){
+  var b = e.target.closest(".play"); if (!b) return;
+  var id = b.getAttribute("data-id"), p = $("player");
+  function go(url){ p.src = url; p.play().catch(function(){ b.textContent = "Can't play here"; }); b.textContent = "▶ Playing"; p.onended = function(){ b.textContent = "▶ Play again"; }; }
+  if (cache[id]) return go(cache[id]);
+  b.textContent = "Loading...";
+  get({action:"audio", code:S.code, id:id}).then(function(d){
+    var bin = atob(d.data), u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    cache[id] = URL.createObjectURL(new Blob([u], {type:d.mime})); go(cache[id]);
+  }).catch(function(err){ b.textContent = "Can't load"; });
+});
+
+/* ---- stand-in card ---- */
+$("gem").href = GEM;
+$("copyCard").onclick = function(){
+  $("copyMsg").textContent = "Getting the card...";
+  get({action:"standin", code:S.code, me:S.me, ex:S.ex}).then(function(d){
+    var c = d.card, t = "Stand-in buddy. Please play the " + (c.role === "host" ? "guesthouse host" : "traveller") + " on this card. I am the " +
+      (c.role === "host" ? "traveller" : "guesthouse host") + ".\n\nCARD: " + c.title + "\n" + (c.situation ? c.situation + "\n" : "") +
+      c.list.map(function(x){ return "- " + x; }).join("\n");
+    return navigator.clipboard.writeText(t);
+  }).then(function(){ $("copyMsg").textContent = "Copied ✓ Now open the AI partner and paste it (Ctrl+V)."; })
+    .catch(function(err){ $("copyMsg").textContent = err.message || "Could not copy."; });
+};
+
+/* ---- recording ---- */
+var rec = null, chunks = [], blob = null, secs = 0, tick = null, stream = null;
+function pickType(){
+  var t = ["audio/webm;codecs=opus","audio/mp4","audio/webm","audio/ogg;codecs=opus"];
+  for (var i = 0; i < t.length; i++) if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t[i])) return t[i];
+  return "";
+}
+function resetRec(){
+  if (rec && rec.state === "recording"){ rec.onstop = null; rec.stop(); }
+  if (stream) stream.getTracks().forEach(function(t){ t.stop(); });
+  rec = null; blob = null; clearInterval(tick);
+  $("preview").hidden = true; $("timer").hidden = true; $("recBtn").hidden = false; $("recBtn").textContent = "● Record"; $("recMsg").textContent = "";
+}
+$("recBtn").onclick = function(){
+  if (rec && rec.state === "recording") return rec.stop();
+  if (!navigator.mediaDevices || !window.MediaRecorder){ $("recMsg").innerHTML = "This browser can't record. Please use Chrome or Edge."; return; }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
+    stream = s; chunks = []; var type = pickType();
+    rec = type ? new MediaRecorder(s, {mimeType:type}) : new MediaRecorder(s);
+    rec.ondataavailable = function(e){ if (e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      clearInterval(tick); s.getTracks().forEach(function(t){ t.stop(); });
+      blob = new Blob(chunks, {type:rec.mimeType || type || "audio/webm"});
+      $("mine").src = URL.createObjectURL(blob);
+      $("recBtn").hidden = true; $("timer").hidden = true; $("preview").hidden = false;
+      $("recMsg").textContent = "Listen to your message. Happy with it? Send it.";
+    };
+    rec.start(); secs = 0; $("timer").textContent = "0:00"; $("timer").hidden = false;
+    $("recBtn").textContent = "■ Stop"; $("recMsg").textContent = "Recording... speak now.";
+    tick = setInterval(function(){
+      secs++; $("timer").textContent = Math.floor(secs / 60) + ":" + ("0" + secs % 60).slice(-2);
+      if (secs >= MAX_SEC) rec.stop();
+    }, 1000);
+  }).catch(function(){
+    $("recMsg").innerHTML = 'We can\'t use your microphone. Please allow it, or <a href="' + MIC_CHECK + '" target="_blank" rel="noopener">check your microphone</a>.';
+  });
+};
+$("again").onclick = function(){ resetRec(); $("recBtn").click(); };
+$("send").onclick = function(){
+  if (!blob) return;
+  var b = this; b.disabled = true; $("again").disabled = true; $("recMsg").textContent = "Sending...";
+  var fr = new FileReader();
+  fr.onload = function(){
+    post({code:S.code, me:S.me, ex:S.ex, mime:blob.type, sec:secs, audio:String(fr.result).split(",")[1]}).then(function(){
+      resetRec(); $("recMsg").innerHTML = '<span style="color:var(--ok)">Sent ✓</span> ' + esc(nameOf(other())) + " can hear it now.";
+      loadMsgs(true);
+    }).catch(function(err){ $("recMsg").innerHTML = '<span class="err">Not sent: ' + esc(err.message) + " Please try again.</span>"; })
+      .then(function(){ b.disabled = false; $("again").disabled = false; });
+  };
+  fr.readAsDataURL(blob);
+};
+
+/* ---- start: open last pair automatically ---- */
+(function(){
+  var q = new URLSearchParams(location.search), code = q.get("code") || read("trip_code");
+  if (code){ $("code").value = code; openPair(code, q.get("code") ? null : read("trip_me")); }
+})();
+</script>
+</body>
+</html>
