@@ -57,6 +57,17 @@ ul.plain li{margin:3px 0}
 .note.ok{border-color:var(--ok)}
 .err{color:var(--err);font-size:.95rem}
 audio{width:100%}
+.fbq{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:6px 0;border-bottom:1px dotted var(--line)}
+.fbq span{flex:1 1 240px}
+.opt{padding:5px 12px;border:1.5px solid var(--accent-deep);border-radius:999px;background:var(--surface);font:400 .9rem Roboto,Arial,sans-serif;color:var(--ink);cursor:pointer}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#212121;font-weight:500}
+.starter{padding:4px 10px;border:1px dashed var(--accent-deep);border-radius:6px;background:var(--surface);font:400 .85rem Roboto,Arial,sans-serif;color:var(--ink);cursor:pointer}
+.fbfield{display:flex;flex-direction:column;gap:6px}
+.fbfield label{font-weight:500}
+textarea{width:100%;min-height:64px;font:inherit;font-size:1rem;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
+textarea:focus{outline:none;border-color:var(--accent-deep);box-shadow:0 0 0 3px rgba(255,213,79,.45)}
+.fbshow p{margin:2px 0}
+.fbshow b{font-weight:500}
 </style>
 </head>
 <body>
@@ -136,6 +147,35 @@ audio{width:100%}
       </div>
       <p class="small" id="recMsg"></p>
     </section>
+
+    <section class="panel fbshow" id="fbShow" hidden></section>
+
+    <section class="panel" id="fbGive" hidden>
+      <h2 id="fbTitle">Give feedback</h2>
+      <p class="muted small" id="fbIntro"></p>
+      <div>
+        <div class="fbq" data-k="clear"><span>I understood your messages.</span><button class="opt">Yes</button><button class="opt">Mostly</button><button class="opt">Not yet</button></div>
+        <div class="fbq" data-k="polite"><span>You were polite.</span><button class="opt">Yes</button><button class="opt">Mostly</button><button class="opt">Not yet</button></div>
+        <div class="fbq" data-k="checked"><span>You checked important details (you said them back).</span><button class="opt">Yes</button><button class="opt">Mostly</button><button class="opt">Not yet</button></div>
+      </div>
+      <div class="fbfield">
+        <label for="fWorked">One thing that worked</label>
+        <div class="row"><button class="starter" data-to="fWorked">It was clear when you said "..."</button><button class="starter" data-to="fWorked">I liked how you ...</button></div>
+        <textarea id="fWorked"></textarea>
+      </div>
+      <div class="fbfield">
+        <label for="fUnclear">One thing that was unclear <span class="muted small" style="font-weight:400">(if any)</span></label>
+        <div class="row"><button class="starter" data-to="fUnclear">I didn't understand ...</button><button class="starter" data-to="fUnclear">It was hard to hear ...</button></div>
+        <textarea id="fUnclear"></textarea>
+      </div>
+      <div class="fbfield">
+        <label for="fNext">One thing to try next time</label>
+        <div class="row"><button class="starter" data-to="fNext">Next time, you could ...</button><button class="starter" data-to="fNext">Try saying: "..."</button></div>
+        <textarea id="fNext"></textarea>
+      </div>
+      <div class="row"><button class="btn primary" id="fbSend">Send feedback</button></div>
+      <p class="small" id="fbMsg"></p>
+    </section>
   </div>
 </div>
 
@@ -147,7 +187,7 @@ var MIC_CHECK = "check.html";
 var MAX_SEC = 90;
 /* =========================================== */
 
-var S = {code:null, A:"", B:"", me:null, ex:1, cards:null, msgs:[], wait:1440, now:Date.now(), clock:0};
+var S = {code:null, A:"", B:"", me:null, ex:1, cards:null, msgs:[], fb:[], wait:1440, now:Date.now(), clock:0};
 var cache = {};
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
@@ -231,7 +271,7 @@ document.addEventListener("click", function(e){
 function loadMsgs(quiet){
   if (!S.code) return;
   if (!quiet) $("msgs").innerHTML = '<p class="muted">Loading messages...</p>';
-  get({action:"messages", code:S.code}).then(function(d){ S.msgs = d.messages; S.now = d.now; S.clock = Date.now(); drawMsgs(); })
+  get({action:"messages", code:S.code}).then(function(d){ S.msgs = d.messages; S.fb = d.feedback || []; S.now = d.now; S.clock = Date.now(); drawMsgs(); })
     .catch(function(err){ $("msgs").innerHTML = '<p class="err">' + esc(err.message) + "</p>"; });
 }
 function nowServer(){ return S.now + (Date.now() - S.clock); }
@@ -262,6 +302,7 @@ function drawMsgs(){
   var waited = last && last.from === S.me ? (nowServer() - last.t) / 60000 : 0;
   $("standin").hidden = !(last && last.from === S.me && waited >= S.wait);
   $("standinTitle").textContent = nameOf(other()) + " hasn't replied yet.";
+  drawFeedback(list);
 }
 $("refresh").onclick = function(){ loadMsgs(); };
 setInterval(function(){ if (S.me && !document.hidden && !rec) loadMsgs(true); }, 30000);
@@ -278,6 +319,63 @@ $("msgs").addEventListener("click", function(e){
     cache[id] = URL.createObjectURL(new Blob([u], {type:d.mime})); go(cache[id]);
   }).catch(function(err){ b.textContent = "Can't load"; });
 });
+
+/* ---- buddy feedback: the host gives it to the traveller ---- */
+var LABELS = {clear:"I understood your messages.", polite:"You were polite.", checked:"You checked important details."};
+function drawFeedback(list){
+  var traveller = roleOf(S.me, S.ex) === "traveller", them = nameOf(other());
+  var f = S.fb.filter(function(x){ return x.ex === S.ex; }).pop();
+  // traveller: show feedback received
+  if (traveller && f){
+    var txt = feedbackText(f, them);
+    $("fbShow").innerHTML = "<h2>Feedback from " + esc(them) + "</h2>" +
+      ["clear","polite","checked"].map(function(k){ return f[k] ? "<p>" + esc(LABELS[k]) + " <b>" + esc(f[k]) + "</b></p>" : ""; }).join("") +
+      '<p style="margin-top:6px"><b>What worked:</b> ' + esc(f.worked) + "</p>" + (f.unclear ? "<p><b>What was unclear:</b> " + esc(f.unclear) + "</p>" : "") +
+      "<p><b>Try next time:</b> " + esc(f.next) + '</p><div class="row" style="margin-top:6px"><button class="btn" id="fbCopy">Copy for my portfolio</button></div>';
+    $("fbShow").hidden = false;
+    $("fbCopy").onclick = function(){ var b = this; navigator.clipboard.writeText(txt).then(function(){ b.textContent = "Copied ✓"; }).catch(function(){ b.textContent = "Could not copy"; }); };
+  } else if (traveller && list.some(function(m){ return m.from === S.me; })){
+    $("fbShow").innerHTML = '<p class="muted">When the talk is finished, ' + esc(them) + " will send you feedback here.</p>"; $("fbShow").hidden = false;
+  } else $("fbShow").hidden = true;
+  // host: give feedback once they have replied at least once
+  var replied = list.some(function(m){ return m.from === S.me; });
+  if (!traveller && f){
+    $("fbGive").hidden = true;
+    $("fbShow").innerHTML = '<p><span style="color:var(--ok)">Feedback sent ✓</span> Thank you for helping ' + esc(them) + ".</p>"; $("fbShow").hidden = false;
+  } else if (!traveller && replied){
+    $("fbTitle").textContent = "Give feedback to " + them;
+    $("fbIntro").textContent = "When the talk is finished, tell " + them + " how it went. Be kind and specific. Quote their words if you can.";
+    $("fbGive").hidden = false;
+  } else $("fbGive").hidden = true;
+}
+function feedbackText(f, from){
+  return "TRIP Unit 1 · Travel buddy feedback (Exchange " + f.ex + ", from " + from + ")\n" +
+    ["clear","polite","checked"].map(function(k){ return LABELS[k] + " " + (f[k] || "-"); }).join("\n") +
+    "\nWhat worked: " + f.worked + (f.unclear ? "\nWhat was unclear: " + f.unclear : "") + "\nTry next time: " + f.next;
+}
+document.querySelectorAll(".fbq").forEach(function(q){
+  q.querySelectorAll(".opt").forEach(function(o){ o.onclick = function(){
+    q.querySelectorAll(".opt").forEach(function(x){ x.setAttribute("aria-pressed", x === o ? "true" : "false"); }); $("fbMsg").textContent = ""; }; });
+});
+document.querySelectorAll(".starter").forEach(function(b){
+  b.onclick = function(){
+    var t = $(b.getAttribute("data-to")), v = b.textContent.replace(/\.\.\."$/, "").replace(/\s*\.\.\.$/, " ");
+    t.value = (t.value ? t.value.replace(/\s*$/, " ") : "") + v; t.focus(); t.setSelectionRange(t.value.length, t.value.length);
+  };
+});
+function pickedOpt(k){ var o = document.querySelector('.fbq[data-k="' + k + '"] .opt[aria-pressed="true"]'); return o ? o.textContent : ""; }
+$("fbSend").onclick = function(){
+  var w = $("fWorked").value.trim(), n = $("fNext").value.trim(), b = this;
+  if (!pickedOpt("clear") || !pickedOpt("polite") || !pickedOpt("checked")){ $("fbMsg").innerHTML = '<span class="err">Please answer the three questions at the top.</span>'; return; }
+  if (w.length < 8 || n.length < 8){ $("fbMsg").innerHTML = '<span class="err">Please finish "One thing that worked" and "One thing to try next time".</span>'; return; }
+  b.disabled = true; $("fbMsg").textContent = "Sending...";
+  post({type:"feedback", code:S.code, me:S.me, ex:S.ex, clear:pickedOpt("clear"), polite:pickedOpt("polite"), checked:pickedOpt("checked"),
+        worked:w, unclear:$("fUnclear").value.trim(), next:n}).then(function(){
+    ["fWorked","fUnclear","fNext"].forEach(function(id){ $(id).value = ""; });
+    document.querySelectorAll(".fbq .opt").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+    $("fbMsg").textContent = ""; loadMsgs(true);
+  }).catch(function(err){ $("fbMsg").innerHTML = '<span class="err">Not sent: ' + esc(err.message) + "</span>"; }).then(function(){ b.disabled = false; });
+};
 
 /* ---- stand-in card ---- */
 $("gem").href = GEM;
