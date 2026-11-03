@@ -131,7 +131,7 @@ textarea:focus{outline:none;border-color:var(--accent-deep);box-shadow:0 0 0 3px
       <p class="small" id="copyMsg"></p>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="recPanel">
       <h2>Your voice message</h2>
       <p class="muted small" id="recHint">Speak for up to 90 seconds. You can listen before you send.</p>
       <div class="row">
@@ -188,7 +188,7 @@ var MAX_SEC = 90;
 /* =========================================== */
 
 var S = {code:null, A:"", B:"", me:null, ex:1, cards:null, msgs:[], fb:[], wait:1440, now:Date.now(), clock:0};
-var cache = {};
+var cache = {}, REVIEW = new URLSearchParams(location.search).get("review") === "1";
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
 function store(k, v){ try{ if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} }
@@ -211,7 +211,7 @@ function openPair(code, me){
   if (!code) return;
   $("loginErr").textContent = "Opening...";
   get({action:"pair", code:code}).then(function(d){
-    S.code = d.code; S.A = d.A; S.B = d.B; S.wait = d.waitMinutes; store("trip_code", d.code);
+    S.code = d.code; S.A = d.A; S.B = d.B; S.wait = d.waitMinutes; if (!REVIEW) store("trip_code", d.code);
     $("loginErr").textContent = "";
     if (me === "A" || me === "B") return choose(me);
     $("names").innerHTML = ["A","B"].map(function(x){ return '<button class="chip" data-me="' + x + '">' + esc(nameOf(x)) + "</button>"; }).join("");
@@ -224,9 +224,11 @@ function openPair(code, me){
 
 /* ---- 2. who are you ---- */
 function choose(me){
-  S.me = me; store("trip_me", me);
+  S.me = me; if (!REVIEW) store("trip_me", me);
   $("login").hidden = true; $("who").hidden = true; $("main").hidden = false;
-  $("hello").textContent = "Hi " + nameOf(me) + "! Your buddy is " + nameOf(other()) + ". Pair " + S.code + ".";
+  $("hello").textContent = REVIEW ? "Instructor review · Pair " + S.code + " · traveller in Exchange " + S.ex + ": " + nameOf(me)
+    : "Hi " + nameOf(me) + "! Your buddy is " + nameOf(other()) + ". Pair " + S.code + ".";
+  if (REVIEW){ document.querySelector(".tabs").hidden = true; ["recPanel","switch"].forEach(function(id){ $(id).hidden = true; }); }
   $("card").innerHTML = '<p class="muted">Loading your card...</p>';
   get({action:"cards", code:S.code, me:me}).then(function(d){ S.cards = d.cards; drawCard(); }).catch(function(err){ $("card").innerHTML = '<p class="err">' + esc(err.message) + "</p>"; });
   loadMsgs();
@@ -303,6 +305,7 @@ function drawMsgs(){
   $("standin").hidden = !(last && last.from === S.me && waited >= S.wait);
   $("standinTitle").textContent = nameOf(other()) + " hasn't replied yet.";
   drawFeedback(list);
+  if (REVIEW){ $("standin").hidden = true; $("fbGive").hidden = true; }
 }
 $("refresh").onclick = function(){ loadMsgs(); };
 setInterval(function(){ if (S.me && !document.hidden && !rec) loadMsgs(true); }, 30000);
@@ -443,6 +446,11 @@ $("send").onclick = function(){
 /* ---- start: open last pair automatically ---- */
 (function(){
   var q = new URLSearchParams(location.search), code = q.get("code") || read("trip_code");
+  if (REVIEW && code){
+    S.ex = q.get("ex") === "2" ? 2 : 1;
+    document.querySelectorAll(".tabs button").forEach(function(x){ x.setAttribute("aria-selected", +x.getAttribute("data-ex") === S.ex ? "true" : "false"); });
+    return openPair(code, S.ex === 1 ? "A" : "B");
+  }
   if (code){ $("code").value = code; openPair(code, q.get("code") ? null : read("trip_me")); }
 })();
 </script>
