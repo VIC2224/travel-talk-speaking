@@ -315,9 +315,18 @@ $("copy-full").onclick = function(){
   setTimeout(function(){ btn.textContent = "Copy goal, transcript and checklist"; }, 2500);
 };
 
-/* start on the tab named in the link (#words, #phrases, #confirm, #full) */
+/* each link opens only the part that belongs to its unit step:
+   #words or #phrases -> Demonstration (Words + Phrases)
+   #confirm          -> Application P1 (Confirm only)
+   #full             -> Application P4 (Full check-in only) */
+var SETS = {words:["words","phrases"], phrases:["words","phrases"], confirm:["confirm"], full:["full"]};
+var STEP = {words:"Demonstration · Words and phrases", phrases:"Demonstration · Words and phrases", confirm:"Application · Listen and act", full:"Application · Compare and get coached"};
 var start = (location.hash || "#words").slice(1);
-showTab(DECKS[start] || start === "full" ? start : "words");
+if (!SETS[start]) start = "words";
+document.querySelectorAll(".tabs button").forEach(function(b){ b.hidden = SETS[start].indexOf(b.getAttribute("data-tab")) < 0; });
+if (SETS[start].length === 1) document.querySelector(".tabs").hidden = true;
+document.querySelector("header p.small").textContent = "TRIP · Unit 1 · " + STEP[start];
+showTab(start);
 </script>
 </body>
 </html>
