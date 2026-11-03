@@ -110,11 +110,11 @@ audio{width:100%}
       <h2 id="standinTitle">No reply yet?</h2>
       <p>You can finish this exchange with the AI stand-in buddy.</p>
       <ol style="margin:0;padding-left:20px">
-        <li>Click <b style="font-weight:500">Copy the card for the AI</b>.</li>
-        <li>Open the AI partner and paste it. Then talk.</li>
+        <li>Click <b style="font-weight:500">Copy the message for the AI</b>.</li>
+        <li>Open the AI partner and paste it. The AI knows the card, and keeps it secret like your buddy would. Then talk.</li>
       </ol>
       <div class="row">
-        <button class="btn primary" id="copyCard">Copy the card for the AI</button>
+        <button class="btn primary" id="copyCard">Copy the message for the AI</button>
         <a class="btn" id="gem" target="_blank" rel="noopener">Open the AI partner ↗</a>
       </div>
       <p class="small" id="copyMsg"></p>
@@ -282,12 +282,10 @@ $("msgs").addEventListener("click", function(e){
 /* ---- stand-in card ---- */
 $("gem").href = GEM;
 $("copyCard").onclick = function(){
-  $("copyMsg").textContent = "Getting the card...";
+  $("copyMsg").textContent = "Getting the message...";
   get({action:"standin", code:S.code, me:S.me, ex:S.ex}).then(function(d){
-    var c = d.card, t = "Stand-in buddy. Please play the " + (c.role === "host" ? "guesthouse host" : "traveller") + " on this card. I am the " +
-      (c.role === "host" ? "traveller" : "guesthouse host") + ".\n\nCARD: " + c.title + "\n" + (c.situation ? c.situation + "\n" : "") +
-      c.list.map(function(x){ return "- " + x; }).join("\n");
-    return navigator.clipboard.writeText(t);
+    var ai = d.aiRole === "host" ? "the guesthouse host" : "the traveller", me = d.aiRole === "host" ? "the traveller" : "the guesthouse host";
+    return navigator.clipboard.writeText("Stand-in buddy. Scenario " + d.scenario + ". Please play " + ai + ". I am " + me + ".");
   }).then(function(){ $("copyMsg").textContent = "Copied ✓ Now open the AI partner and paste it (Ctrl+V)."; })
     .catch(function(err){ $("copyMsg").textContent = err.message || "Could not copy."; });
 };
