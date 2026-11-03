@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>TRIP Portfolio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap">
+<style>
+:root{--paper:#FAF7F0;--surface:#fff;--sunk:#F3EFE6;--ink:#212121;--muted:#5F5A50;--line:#E4DED2;--accent:#FFD54F;--accent-deep:#F2B600;--tint:#FFF6D6;--ok:#1E7F47;--okbg:#F1F9F3}
+@media (prefers-color-scheme:dark){:root{--paper:#171512;--surface:#211E1A;--sunk:#2A2621;--ink:#EEE9DF;--muted:#B3AA9C;--line:#3A352E;--accent:#F2C94C;--accent-deep:#E0B23A;--tint:#3A3220;--ok:#6CCB94;--okbg:#1E2A22;color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Roboto,Arial,sans-serif;font-size:16px;line-height:1.55}
+.wrap{max-width:860px;margin:0 auto;padding:22px 16px 60px;display:flex;flex-direction:column;gap:16px}
+h1{font-weight:300;font-size:2rem;margin:0;line-height:1.15}
+h2{font-weight:400;font-size:1.25rem;margin:0}
+h3{font-weight:500;font-size:1rem;margin:0}
+p{margin:0}
+.eyebrow{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.small{font-size:.9rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--accent-deep);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:8px;font:500 .9rem Roboto,Arial,sans-serif;cursor:pointer;text-decoration:none}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.step{border:1.5px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.step.on{border-color:var(--ok);background:var(--okbg)}
+.step b{font-weight:500;font-size:.92rem}
+.step .st{font-size:.8rem;color:var(--muted)}
+.step.on .st{color:var(--ok)}
+.bar{height:10px;background:var(--sunk);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent-deep)}
+.big{font-size:1.9rem;font-weight:300}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 12px;font-size:.95rem}
+.kv dt{color:var(--muted)}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.item{border-top:1px dotted var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.item:first-of-type{border-top:0;padding-top:0}
+pre{white-space:pre-wrap;font:inherit;font-size:.92rem;margin:0;background:var(--sunk);border-radius:8px;padding:10px 12px}
+.note{padding:10px 14px;border-radius:8px;background:var(--tint)}
+.ok{padding:10px 14px;border-radius:8px;background:var(--okbg);border-left:5px solid var(--ok)}
+.err{color:#B53A2A}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+td.c{text-align:center}
+.tick{color:var(--ok);font-weight:500}.dash{color:var(--muted)}
+.link{background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
+.tablewrap{overflow-x:auto}
+@media (max-width:640px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}}
+@media print{body{background:#fff}.noprint{display:none!important}.panel{break-inside:avoid;border-color:#ccc}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="row" style="justify-content:space-between;align-items:flex-end">
+    <div><p class="eyebrow" id="eyebrow">TRIP · My portfolio</p><h1 id="title">Loading...</h1></div>
+    <div class="row noprint"><button class="btn" id="back" hidden>← Class overview</button><button class="btn" id="print">Print / Save as PDF</button></div>
+  </header>
+  <p class="err" id="err"></p>
+  <div id="out" style="display:flex;flex-direction:column;gap:16px"></div>
+</div>
+<script>
+var API = "https://script.google.com/macros/s/AKfycbyhA3s6KwwVS03SceUPfc7fZhGK6QeoZasVW6lMdW7OHM0A2WrnVZuvarX6cd1oCwM/exec";
+var q = new URLSearchParams(location.search), K = q.get("k"), T = q.get("t");
+var STEPS = [
+  ["activation","1 · Activation","Send the “Mark your starting point” answers"],
+  ["demonstration","2 · Demonstration","Click “I've finished this step” at the end of the page"],
+  ["application","3 · Application","Save one AI role-play in “Look back and plan”"],
+  ["integration","4 · Integration","Send a message as the traveller and get your buddy's feedback"],
+  ["check","5 · Unit check","Do the quiz and the look back"]];
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function day(t){ return t ? new Date(t).toLocaleDateString([], {day:"numeric", month:"short"}) : ""; }
+function get(p){ var s = Object.keys(p).map(function(k){ return k + "=" + encodeURIComponent(p[k]); }).join("&");
+  return fetch(API + "?" + s).then(function(r){ return r.json(); }).then(function(d){ if (!d.ok) throw new Error(d.error); return d; }); }
+function panel(title, body, eyebrow){ return '<section class="panel">' + (eyebrow ? '<p class="eyebrow">' + eyebrow + "</p>" : "") + "<h2>" + title + "</h2>" + body + "</section>"; }
+function kv(rows){ return '<dl class="kv">' + rows.filter(function(r){ return r[1] !== "" && r[1] != null; }).map(function(r){ return "<dt>" + r[0] + "</dt><dd>" + esc(r[1]) + "</dd>"; }).join("") + "</dl>"; }
+function empty(t){ return '<p class="muted">' + t + "</p>"; }
+
+function render(p, teacher){
+  $("title").textContent = p.name;
+  $("eyebrow").textContent = teacher ? "TRIP · Portfolio (teacher view)" : "TRIP · My portfolio";
+  document.title = "TRIP Portfolio · " + p.name;
+  var done = STEPS.filter(function(s){ return p.progress[s[0]]; }).length, h = "";
+  // progress
+  h += panel("Unit 1 · Checking in",
+    '<div class="row" style="justify-content:space-between"><span class="big">' + done + " / 5 steps</span><span class=\"muted small\">" +
+      (done === 5 ? "Unit 1 complete. Well done!" : "Keep going, one step at a time!") + '</span></div><div class="bar"><i style="width:' + done * 20 + '%"></i></div>' +
+    '<div class="steps">' + STEPS.map(function(s){ var on = p.progress[s[0]];
+      return '<div class="step' + (on ? " on" : "") + '"><b>' + s[1] + '</b><span class="st">' + (on ? "✓ Done" : esc(s[2])) + "</span></div>"; }).join("") + "</div>", "My progress");
+  // confidence
+  if (p.start || p.reflection){
+    var b = p.start ? p.start.confidence : "?", n = p.reflection ? p.reflection.now : "?";
+    h += panel("My confidence", '<p class="big">' + esc(b) + " → " + esc(n) + ' <span class="muted small">(out of 5)</span></p><p class="muted small">At the start of Unit 1 → after the Unit check</p>');
+  }
+  // activation
+  h += panel("1 · Activation: my starting point", p.start ? kv([["Checked in in English before?", p.start.before],["Hard for me", p.start.hard],["Confidence", p.start.confidence + " / 5"],["My goal", p.start.goal]]) : empty("Not sent yet."));
+  // application
+  var pr = p.practice.slice().reverse();
+  h += panel("3 · Application: my saved practice", pr.length ? pr.map(function(x){ return '<div class="item"><h3>' + esc(x.activity) + ' <span class="muted small" style="font-weight:400">· ' + day(x.t) + "</span></h3><pre>" + esc(x.record) + "</pre></div>"; }).join("") : empty("Nothing saved yet. Use “Save to my portfolio” in P1, P2 and P4."));
+  // integration
+  h += panel("4 · Integration: my travel buddy", p.buddy.length ? p.buddy.map(function(x){
+    var f = x.feedback, r = x.rating;
+    return '<div class="item"><h3>Buddy: ' + esc(x.buddy) + ' <span class="muted small" style="font-weight:400">· I was the traveller in Exchange ' + x.ex + " · " + x.sent + " message(s) sent</span></h3>" +
+      (f ? '<p class="eyebrow">Feedback from ' + esc(x.buddy) + "</p>" + kv([["I understood your messages", f.clear],["You were polite", f.polite],["You checked details", f.checked],["What worked", f.worked],["What was unclear", f.unclear],["Try next time", f.next]]) : empty("No feedback from your buddy yet.")) +
+      (r ? '<div class="ok"><p class="eyebrow" style="color:inherit">From your instructor · ' + esc(r.total) + " / 12</p>" + kv([["Task completion", r.task + " / 3"],["Checking details", r.checking + " / 3"],["Politeness", r.polite + " / 3"],["Clarity", r.clarity + " / 3"],["Comment", r.comment]]) + "</div>"
+         : '<p class="note small">Your instructor will listen to your traveller messages and add a rating here.</p>') + "</div>"; }).join("") : empty("You don't have a travel buddy yet."));
+  if (p.trips.length) h += panel("My trips", p.trips.map(function(t){ return "<p>" + esc(t.place) + ' <span class="muted small">· ' + (t.scenario ? "ready as practice situation " + esc(t.scenario) : "waiting for your instructor") + "</span></p>"; }).join(""));
+  // unit check
+  var qz = p.quiz, rf = p.reflection;
+  h += panel("5 · Unit check",
+    '<div class="grid2"><div><h3>Unit quiz</h3>' + (qz ? kv([["First try", qz.first.score],["Best try", qz.best.score],["Best: listening", qz.best.listening],["Best: words", qz.best.words],["Best: sentences", qz.best.sentences],["Tries", qz.tries]]) : empty("Not done yet.")) + "</div>" +
+    "<div><h3>Look back and look ahead</h3>" + (rf ? kv([["Confidence", rf.before + " → " + rf.now],["What got better", rf.better],["Still hard", rf.hard],["Goal for Unit 2", rf.goal]]) : empty("Not done yet.")) + "</div></div>");
+  if (p.live.length) h += panel("Live sessions", "<p>I signed up for: " + p.live.map(esc).join(", ") + "</p>");
+  $("out").innerHTML = h;
+}
+function overview(list){
+  $("title").textContent = "Class overview"; $("eyebrow").textContent = "TRIP · Teacher"; $("back").hidden = true;
+  var h = '<section class="panel"><p class="muted small">Unit 1 · ✓ = step done. Click a name to open that portfolio.</p><div class="tablewrap"><table><thead><tr><th>Learner</th>' +
+    STEPS.map(function(s){ return '<th class="c">' + s[1].split(" · ")[0] + "</th>"; }).join("") + "<th>Quiz (best)</th><th>Confidence</th></tr></thead><tbody>" +
+    list.map(function(l){ return '<tr><td><button class="link" data-n="' + esc(l.name) + '">' + esc(l.name) + "</button></td>" +
+      STEPS.map(function(s){ return '<td class="c">' + (l.progress[s[0]] ? '<span class="tick">✓</span>' : '<span class="dash">·</span>') + "</td>"; }).join("") +
+      "<td>" + esc(l.quiz) + "</td><td>" + esc(l.confidence) + "</td></tr>"; }).join("") + "</tbody></table></div>" +
+    '<p class="muted small">Steps: 1 Activation · 2 Demonstration · 3 Application · 4 Integration · 5 Unit check</p></section>';
+  $("out").innerHTML = h;
+  $("out").querySelectorAll("[data-n]").forEach(function(b){ b.onclick = function(){ openLearner(b.getAttribute("data-n")); }; });
+}
+function openLearner(n){
+  $("out").innerHTML = '<p class="muted">Loading...</p>';
+  get({action:"portfolio", t:T, name:n}).then(function(d){ render(d.portfolio, true); $("back").hidden = false; window.scrollTo(0, 0); }).catch(function(e){ $("err").textContent = e.message; });
+}
+$("back").onclick = function(){ load(); };
+$("print").onclick = function(){ window.print(); };
+function load(){
+  $("err").textContent = "";
+  if (T) return get({action:"class", t:T}).then(function(d){ overview(d.learners); }).catch(function(e){ $("title").textContent = "TRIP"; $("err").textContent = e.message; });
+  if (!K){ $("title").textContent = "TRIP"; $("err").textContent = "Please open your portfolio with the link in your email. Lost it? Ask for a new one on the My portfolio page."; return; }
+  get({action:"portfolio", k:K}).then(function(d){ render(d.portfolio, false); }).catch(function(e){ $("title").textContent = "TRIP"; $("err").textContent = e.message; });
+}
+load();
+</script>
+</body>
+</html>
