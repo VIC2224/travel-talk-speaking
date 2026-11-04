@@ -119,16 +119,22 @@ textarea:focus{outline:none;border-color:var(--accent-deep);box-shadow:0 0 0 3px
 
     <section class="panel" id="standin" hidden>
       <h2 id="standinTitle">No reply yet?</h2>
-      <p>You can finish this exchange with the AI stand-in buddy.</p>
+      <p id="standinNote"></p>
       <ol style="margin:0;padding-left:20px">
         <li>Click <b style="font-weight:500">Copy the message for the AI</b>.</li>
         <li>Open the AI partner and paste it. The AI knows the card, and keeps it secret like your buddy would. Then talk.</li>
+        <li>At the end, the AI gives you feedback. Paste it below to save it to your portfolio.</li>
       </ol>
       <div class="row">
         <button class="btn primary" id="copyCard">Copy the message for the AI</button>
         <a class="btn" id="gem" target="_blank" rel="noopener">Open the AI partner ↗</a>
       </div>
       <p class="small" id="copyMsg"></p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label for="aiFb" style="font-weight:500">The AI's feedback</label>
+        <textarea id="aiFb" placeholder="Paste the AI's feedback here."></textarea>
+        <div class="row"><button class="btn" id="aiSave">Save to my portfolio</button><span class="small" id="aiMsg"></span></div>
+      </div>
     </section>
 
     <section class="panel" id="recPanel">
@@ -194,7 +200,10 @@ function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&
 function store(k, v){ try{ if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} }
 function read(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function other(){ return S.me === "A" ? "B" : "A"; }
+var PLACEHOLDER = "Waiting for a buddy";
 function nameOf(x){ return x === "A" ? S.A : S.B; }
+function alone(){ return nameOf(other()) === PLACEHOLDER; }
+function buddyName(){ return alone() ? "your buddy" : nameOf(other()); }
 function roleOf(me, ex){ return ((ex === 1) === (me === "A")) ? "traveller" : "host"; }
 
 function get(params){
@@ -214,7 +223,7 @@ function openPair(code, me){
     S.code = d.code; S.A = d.A; S.B = d.B; S.wait = d.waitMinutes; if (!REVIEW) store("trip_code", d.code);
     $("loginErr").textContent = "";
     if (me === "A" || me === "B") return choose(me);
-    $("names").innerHTML = ["A","B"].map(function(x){ return '<button class="chip" data-me="' + x + '">' + esc(nameOf(x)) + "</button>"; }).join("");
+    $("names").innerHTML = ["A","B"].filter(function(x){ return nameOf(x) !== PLACEHOLDER; }).map(function(x){ return '<button class="chip" data-me="' + x + '">' + esc(nameOf(x)) + "</button>"; }).join("");
     $("names").querySelectorAll(".chip").forEach(function(b){ b.onclick = function(){ choose(b.getAttribute("data-me")); }; });
     $("login").hidden = true; $("who").hidden = false;
   }).catch(function(err){
@@ -227,6 +236,7 @@ function choose(me){
   S.me = me; if (!REVIEW) store("trip_me", me);
   $("login").hidden = true; $("who").hidden = true; $("main").hidden = false;
   $("hello").textContent = REVIEW ? "Instructor review · Pair " + S.code + " · traveller in Exchange " + S.ex + ": " + nameOf(me)
+    : alone() ? "Hi " + nameOf(me) + "! Your buddy hasn't joined yet. Pair " + S.code + "."
     : "Hi " + nameOf(me) + "! Your buddy is " + nameOf(other()) + ". Pair " + S.code + ".";
   if (REVIEW){ document.querySelector(".tabs").hidden = true; ["recPanel","switch"].forEach(function(id){ $(id).hidden = true; }); }
   $("card").innerHTML = '<p class="muted">Loading your card...</p>';
@@ -248,8 +258,11 @@ document.querySelectorAll(".tabs button").forEach(function(b){
 
 /* ---- card ---- */
 function drawCard(){
-  var r = roleOf(S.me, S.ex), them = esc(nameOf(other()));
-  $("role").innerHTML = r === "traveller"
+  var r = roleOf(S.me, S.ex), them = esc(buddyName()), Them = them.charAt(0).toUpperCase() + them.slice(1);
+  if (alone()) $("role").innerHTML = r === "traveller"
+    ? "You are the <b>traveller</b>. Your buddy hasn't joined yet, so <b>start now</b>: send your first message, then finish with the AI stand-in buddy below."
+    : "You are the <b>guesthouse host</b> here. Your buddy hasn't joined yet. We'll email you when they do.";
+  else $("role").innerHTML = r === "traveller"
     ? "You are the <b>traveller</b>. " + them + " is the guesthouse host. <b>You start.</b>"
     : "You are the <b>guesthouse host</b>. " + them + " is the traveller. Wait for their first message, then reply.";
   if (!S.cards) return;
@@ -287,6 +300,7 @@ function drawMsgs(){
   var list = S.msgs.filter(function(m){ return m.ex === S.ex; }), traveller = roleOf(S.me, S.ex) === "traveller";
   if (!list.length){
     $("msgs").innerHTML = '<p class="empty">' + (traveller ? "No messages yet. You start: send your first voice message below."
+      : alone() ? "Your buddy hasn't joined yet. When they do, their first message will appear here."
       : "No messages yet. " + esc(nameOf(other())) + " starts. Their message will appear here.") + "</p>";
   } else {
     $("msgs").innerHTML = list.map(function(m){
@@ -298,12 +312,17 @@ function drawMsgs(){
   // host must wait for the traveller's first message
   var canRec = traveller || list.some(function(m){ return m.from !== S.me; });
   $("recBtn").disabled = !canRec;
-  $("recHint").textContent = canRec ? "Speak for up to 90 seconds. You can listen before you send." : "You can reply after " + nameOf(other()) + " sends the first message.";
+  $("recHint").textContent = canRec ? "Speak for up to 90 seconds. You can listen before you send." : "You can reply after " + buddyName() + " sends the first message.";
   // stand-in
   var last = list[list.length - 1];
   var waited = last && last.from === S.me ? (nowServer() - last.t) / 60000 : 0;
-  $("standin").hidden = !(last && last.from === S.me && waited >= S.wait);
-  $("standinTitle").textContent = nameOf(other()) + " hasn't replied yet.";
+  $("standin").hidden = alone() ? !traveller : !(last && last.from === S.me && waited >= S.wait);
+  // show the stand-in option on time, without waiting for the next refresh
+  clearTimeout(S.standinTimer);
+  if (!alone() && last && last.from === S.me && waited < S.wait) S.standinTimer = setTimeout(drawMsgs, (S.wait - waited) * 60000 + 300);
+  $("standinTitle").textContent = alone() ? "No buddy yet? Practise with the AI" : "Waiting for " + nameOf(other()) + "?";
+  $("standinNote").textContent = alone() ? "You can do this exchange with the AI stand-in buddy now."
+    : "We've emailed " + nameOf(other()) + " about your message. It's best to wait for them: buddies have up to 24 hours to reply. Can't wait? Practise with the AI stand-in buddy now. You can still come back and continue with " + nameOf(other()) + " any time.";
   drawFeedback(list);
   if (REVIEW){ $("standin").hidden = true; $("fbGive").hidden = true; }
 }
@@ -380,6 +399,16 @@ $("fbSend").onclick = function(){
   }).catch(function(err){ $("fbMsg").innerHTML = '<span class="err">Not sent: ' + esc(err.message) + "</span>"; }).then(function(){ b.disabled = false; });
 };
 
+/* ---- save the AI stand-in's feedback ---- */
+$("aiSave").onclick = function(){
+  var t = $("aiFb").value.trim(), b = this;
+  if (t.length < 10){ $("aiMsg").textContent = "Please paste the AI's feedback first."; return; }
+  b.disabled = true; $("aiMsg").textContent = "Saving...";
+  post({type:"save", unit:"Unit 1", name:nameOf(S.me), activity:"I1 AI stand-in buddy (Exchange " + S.ex + ")", summary:t}).then(function(){
+    $("aiMsg").textContent = "Saved ✓ It's in your portfolio."; $("aiFb").value = "";
+  }).catch(function(){ $("aiMsg").textContent = "Not saved. Please try again."; }).then(function(){ b.disabled = false; });
+};
+
 /* ---- stand-in card ---- */
 $("gem").href = GEM;
 $("copyCard").onclick = function(){
@@ -435,7 +464,7 @@ $("send").onclick = function(){
   var fr = new FileReader();
   fr.onload = function(){
     post({code:S.code, me:S.me, ex:S.ex, mime:blob.type, sec:secs, audio:String(fr.result).split(",")[1]}).then(function(){
-      resetRec(); $("recMsg").innerHTML = '<span style="color:var(--ok)">Sent ✓</span> ' + esc(nameOf(other())) + " can hear it now.";
+      resetRec(); $("recMsg").innerHTML = '<span style="color:var(--ok)">Sent ✓</span> ' + (alone() ? "Saved. Your buddy will hear it when they join. Now try it with the AI stand-in buddy below." : esc(nameOf(other())) + " can hear it now.");
       loadMsgs(true);
     }).catch(function(err){ $("recMsg").innerHTML = '<span class="err">Not sent: ' + esc(err.message) + " Please try again.</span>"; })
       .then(function(){ b.disabled = false; $("again").disabled = false; });
