@@ -132,10 +132,35 @@ function openLearner(n){
 $("back").onclick = function(){ load(); };
 $("print").onclick = function(){ window.print(); };
 function approve(id){
-  $("eyebrow").textContent = "TRIP · Practice situations"; $("title").textContent = "Approving " + id + "...";
-  get({action:"approvejson", plan:id, t:T}).then(function(d){ $("title").textContent = "Done"; $("out").innerHTML = '<section class="panel"><p>' + esc(d.message) + "</p></section>"; })
-    .catch(function(e){ $("title").textContent = "Not approved"; $("err").textContent = e.message; });
+  $("eyebrow").textContent = "TRIP · Practice situation " + id; $("title").textContent = "Check, edit and approve";
+  $("out").innerHTML = '<p class="muted">Loading the draft...</p>';
+  get({action:"draftjson", plan:id, t:T}).then(showDraft).catch(function(e){ $("out").innerHTML = ""; $("err").textContent = e.message; });
 }
+function showDraft(d){
+  if (d.scenario){ $("out").innerHTML = '<section class="panel"><p>Already approved as ' + esc(d.scenario) + '.</p></section>'; return; }
+  if (!d.draft){ $("out").innerHTML = '<section class="panel"><p>There is no AI draft yet (' + esc(d.status || "") + ').</p><div class="row"><button class="btn" id="redo">Ask the AI for a draft</button></div></section>'; $("redo").onclick = redo; return; }
+  var j = d.draft, ta = function(id, v, rows){ return '<textarea id="' + id + '" rows="' + rows + '" style="width:100%;font:inherit;font-size:.95rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)">' + esc(v) + "</textarea>"; };
+  $("out").innerHTML =
+    '<section class="panel"><p class="eyebrow">The learner\'s plan</p>' + kv([["Learner", d.learner],["Going to", d.place],["Staying at", d.stay],["Arriving", d.arrive],["Travelling by", d.travel],["Needs", d.needs],["Anything special", d.special]]) + "</section>" +
+    '<section class="panel"><p class="eyebrow">AI draft · change anything you like</p>' +
+    '<h3>Title</h3><input id="dTitle" value="' + esc(j.title) + '" style="width:100%;font:inherit;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)">' +
+    "<h3>Traveller: situation</h3>" + ta("dSit", j.travellerSituation, 4) +
+    '<h3>Traveller: what to do <span class="muted small" style="font-weight:400">(one per line)</span></h3>' + ta("dTasks", [].concat(j.travellerTasks).join("\n"), 5) +
+    '<h3>Host: what the host knows <span class="muted small" style="font-weight:400">(one per line; keep a "Find out:" line)</span></h3>' + ta("dInfo", [].concat(j.hostInfo).join("\n"), 7) +
+    '<h3>Host: sentences <span class="muted small" style="font-weight:400">(one per line)</span></h3>' + ta("dSay", [].concat(j.hostSentences).join("\n"), 8) +
+    '<div class="row"><button class="btn" id="ok" style="background:var(--accent);border-color:var(--accent)">Approve and add</button><button class="btn" id="redo">Ask the AI for a new draft</button></div><p class="small" id="msg"></p></section>';
+  $("ok").onclick = function(){
+    var lines = function(id){ return $(id).value.split(/\n+/).map(function(x){ return x.trim(); }).filter(String); };
+    var draft = {title:$("dTitle").value.trim(), travellerSituation:$("dSit").value.trim(), travellerTasks:lines("dTasks"), hostInfo:lines("dInfo"), hostSentences:lines("dSay")};
+    this.disabled = true; $("msg").textContent = "Saving and approving...";
+    post({type:"approveEdited", plan:d.plan, t:T, draft:draft}).then(function(x){ $("title").textContent = "Done"; $("out").innerHTML = '<section class="panel"><p>' + esc(x.message) + "</p></section>"; })
+      .catch(function(e){ $("ok").disabled = false; $("msg").textContent = e.message; });
+  };
+  $("redo").onclick = redo;
+  function redo(){ $("msg") && ($("msg").textContent = "Asking the AI... (about 10 seconds)"); post({type:"redraft", plan:d.plan, t:T}).then(showDraft).catch(function(e){ $("err").textContent = e.message; }); }
+}
+function redo(){ var id = q.get("approve"); $("out").innerHTML = '<p class="muted">Asking the AI... (about 10 seconds)</p>'; post({type:"redraft", plan:id, t:T}).then(showDraft).catch(function(e){ $("err").textContent = e.message; }); }
+function post(b){ return fetch(API, {method:"POST", body:JSON.stringify(b)}).then(function(r){ return r.json(); }).then(function(d){ if (!d.ok) throw new Error(d.error); return d; }); }
 function load(){
   $("err").textContent = "";
   if (q.get("approve") && T) return approve(q.get("approve"));
