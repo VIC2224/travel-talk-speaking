@@ -149,9 +149,6 @@ var $ = function(id){ return document.getElementById(id); };
 function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
 var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 var canRecord = !!(navigator.mediaDevices && window.MediaRecorder);
-/* Phones can't record and turn speech into text at the same time, so on a phone we only show the words. */
-var PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-var WORDS_ONLY = PHONE && !!SR;
 if (!canRecord || !SR) $("support").innerHTML = '<div class="warn">' + (!canRecord ? "This browser cannot record audio here. " : "") + (!SR ? "This browser cannot show your words, so you can record and listen but not see what we understood. " : "") + "For everything, open this page in Chrome or Edge.</div>";
 
 function speak(text, slow){
@@ -182,20 +179,8 @@ function compare(target, heard){
 /* one microphone session: recorder + live transcript */
 function makeSession(o){
   var stream, rec, chunks = [], sr, finalText = "", t0, tick, stopping = false;
-  function startWordsOnly(){
-    finalText = ""; stopping = false;
-    sr = new SR(); sr.lang = "en-US"; sr.continuous = false; sr.interimResults = true;
-    sr.onresult = function(e){ var interim = ""; for (var i = e.resultIndex; i < e.results.length; i++){ var t = e.results[i][0].transcript; if (e.results[i].isFinal) finalText += t + " "; else interim += t; } o.live.innerHTML = esc(finalText) + '<span class="muted">' + esc(interim) + "</span>"; };
-    sr.onend = function(){ if (!stopping){ stopping = true; clearInterval(tick); o.live.classList.remove("on"); o.onDone(null, finalText.trim()); } };
-    sr.onerror = function(e){ if (e.error === "not-allowed" || e.error === "service-not-allowed") o.live.textContent = "We could not use your microphone. Allow the microphone for this site, then try again."; };
-    try{ sr.start(); }catch(e){ return Promise.resolve(false); }
-    o.live.textContent = "Listening… speak now."; o.live.classList.add("on"); t0 = Date.now();
-    tick = setInterval(function(){ var s = Math.floor((Date.now() - t0) / 1000); o.timer.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); if (s >= o.max) stop(); }, 250);
-    return Promise.resolve(true);
-  }
   function start(){
     speechSynthesis.cancel();
-    if (WORDS_ONLY) return startWordsOnly();
     return navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
       stream = s; chunks = []; finalText = ""; stopping = false;
       rec = new MediaRecorder(stream);
@@ -214,10 +199,8 @@ function makeSession(o){
       return true;
     }).catch(function(e){ o.live.textContent = "We could not use your microphone (" + e.name + "). Allow the microphone in the address bar, then try again."; return false; });
   }
-  function stop(){
-    if (WORDS_ONLY){ try{ sr && sr.stop(); }catch(e){} return; }      // sr.onend reports the result
-    if (stopping) return; stopping = true; clearInterval(tick); o.live.classList.remove("on"); try{ sr && sr.stop(); }catch(e){} setTimeout(function(){ try{ rec && rec.state !== "inactive" && rec.stop(); }catch(e){} }, 400); }
-  return {start:start, stop:stop, active:function(){ return WORDS_ONLY ? (!!sr && !stopping) : (rec && rec.state === "recording" && !stopping); }};
+  function stop(){ if (stopping) return; stopping = true; clearInterval(tick); o.live.classList.remove("on"); try{ sr && sr.stop(); }catch(e){} setTimeout(function(){ try{ rec && rec.state !== "inactive" && rec.stop(); }catch(e){} }, 400); }
+  return {start:start, stop:stop, active:function(){ return rec && rec.state === "recording" && !stopping; }};
 }
 
 var START = "words";
@@ -246,8 +229,7 @@ function renderDeck(){
 var mineURL = null;
 var deckSession = makeSession({live:$("live-deck"), timer:$("t-deck"), max:15, onDone:function(blob, text){
   $("rec-deck").textContent = "● Record";
-  if (blob){ if (mineURL) URL.revokeObjectURL(mineURL); mineURL = URL.createObjectURL(blob); $("mine-deck").src = mineURL; }
-  $("mine-deck").parentNode.hidden = !blob; $("model-then-me").hidden = !blob;
+  if (mineURL) URL.revokeObjectURL(mineURL); mineURL = URL.createObjectURL(blob); $("mine-deck").src = mineURL;
   var c = compare(items[sel], text);
   $("target").innerHTML = c.html;
   var msg;
@@ -255,7 +237,6 @@ var deckSession = makeSession({live:$("live-deck"), timer:$("t-deck"), max:15, o
   else if (!text) msg = "We could not hear any words. Speak a little closer to the microphone and try again.";
   else if (c.hit === c.total){ msg = "<b>Clear!</b> We understood every word. We heard: \"" + esc(text) + "\""; done[deckName + sel] = 1; }
   else msg = "We understood <b>" + c.hit + " of " + c.total + "</b> words. We heard: \"" + esc(text) + "\". Listen to the grey words again (try Slow), then record once more.";
-  if (!blob) msg += '<br><span class="small muted">On a phone, we show your words but don\'t keep a recording. To hear your own voice, use a computer.</span>';
   $("score-deck").innerHTML = msg;
   $("result-deck").hidden = false;
   document.querySelectorAll(".chip").forEach(function(ch){ if (done[deckName + ch.getAttribute("data-k")]) ch.classList.add("done"); });
