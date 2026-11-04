@@ -131,8 +131,14 @@ function openLearner(n){
 }
 $("back").onclick = function(){ load(); };
 $("print").onclick = function(){ window.print(); };
+function approve(id){
+  $("eyebrow").textContent = "TRIP · Practice situations"; $("title").textContent = "Approving " + id + "...";
+  get({action:"approvejson", plan:id, t:T}).then(function(d){ $("title").textContent = "Done"; $("out").innerHTML = '<section class="panel"><p>' + esc(d.message) + "</p></section>"; })
+    .catch(function(e){ $("title").textContent = "Not approved"; $("err").textContent = e.message; });
+}
 function load(){
   $("err").textContent = "";
+  if (q.get("approve") && T) return approve(q.get("approve"));
   if (T) return get({action:"class", t:T}).then(function(d){ overview(d.learners); }).catch(function(e){ $("title").textContent = "TRIP"; $("err").textContent = e.message; });
   if (!K){ $("title").textContent = "TRIP"; $("err").textContent = "Please open your portfolio with the link in your email. Lost it? Ask for a new one on the My portfolio page."; return; }
   get({action:"portfolio", k:K}).then(function(d){ render(d.portfolio, false); }).catch(function(e){ $("title").textContent = "TRIP"; $("err").textContent = e.message; });
