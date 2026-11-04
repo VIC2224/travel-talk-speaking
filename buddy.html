@@ -156,6 +156,12 @@ textarea:focus{outline:none;border-color:var(--accent-deep);box-shadow:0 0 0 3px
 
     <section class="panel fbshow" id="fbShow" hidden></section>
 
+    <section class="panel" id="fbAsk" hidden>
+      <h2 id="fbAskTitle">Is your talk finished?</h2>
+      <p class="muted small" id="fbAskText"></p>
+      <div class="row"><button class="btn primary" id="fbAskYes">Yes, we're finished: give feedback</button></div>
+    </section>
+
     <section class="panel" id="fbGive" hidden>
       <h2 id="fbTitle">Give feedback</h2>
       <p class="muted small" id="fbIntro"></p>
@@ -272,7 +278,8 @@ function drawCard(){
       c.list.map(function(t){ return '<label class="check"><input type="checkbox"><span>' + esc(t) + "</span></label>"; }).join("");
   } else {
     h += '<p class="eyebrow">What you know</p><ul class="plain">' + c.list.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>" +
-      '<p class="eyebrow" style="margin-top:6px">Sentences you can use</p><div>' +
+      '<p class="eyebrow" style="margin-top:6px">Sentences you can use</p>' +
+      '<p class="small muted" style="margin:0 0 4px">These are ideas to help you. Feel free to use your own words and your own travel experience too, just like a real host. Your job is to help your buddy practise, and you\'ll practise too!</p><div>' +
       c.phrases.map(function(t){ return '<div class="say"><button class="hear" data-t="' + esc(t) + '" aria-label="Listen">▶</button><span>' + esc(t) + "</span></div>"; }).join("") + "</div>";
   }
   $("card").innerHTML = h;
@@ -324,7 +331,7 @@ function drawMsgs(){
   $("standinNote").textContent = alone() ? "You can do this exchange with the AI stand-in buddy now."
     : "We've emailed " + nameOf(other()) + " about your message. It's best to wait for them: buddies have up to 24 hours to reply. Can't wait? Practise with the AI stand-in buddy now. You can still come back and continue with " + nameOf(other()) + " any time.";
   drawFeedback(list);
-  if (REVIEW){ $("standin").hidden = true; $("fbGive").hidden = true; }
+  if (REVIEW){ $("standin").hidden = true; $("fbGive").hidden = true; $("fbAsk").hidden = true; }
 }
 $("refresh").onclick = function(){ loadMsgs(); };
 setInterval(function(){ if (S.me && !document.hidden && !rec) loadMsgs(true); }, 30000);
@@ -344,7 +351,9 @@ $("msgs").addEventListener("click", function(e){
 
 /* ---- buddy feedback: the host gives it to the traveller ---- */
 var LABELS = {clear:"I understood your messages.", polite:"You were polite.", checked:"You checked important details."};
+$("fbAskYes").onclick = function(){ S.fbOpen = S.fbOpen || {}; S.fbOpen[S.ex] = true; drawMsgs(); $("fbGive").scrollIntoView({behavior:"smooth", block:"start"}); };
 function drawFeedback(list){
+  $("fbAsk").hidden = true;
   var traveller = roleOf(S.me, S.ex) === "traveller", them = nameOf(other());
   var f = S.fb.filter(function(x){ return x.ex === S.ex; }).pop();
   // traveller: show feedback received
@@ -364,6 +373,11 @@ function drawFeedback(list){
   if (!traveller && f){
     $("fbGive").hidden = true;
     $("fbShow").innerHTML = '<p><span style="color:var(--ok)">Feedback sent ✓</span> Thank you for helping ' + esc(them) + ".</p>"; $("fbShow").hidden = false;
+  } else if (!traveller && replied && !(S.fbOpen || {})[S.ex]){
+    $("fbGive").hidden = true;
+    $("fbAskTitle").textContent = "Is your talk with " + them + " finished?";
+    $("fbAskText").textContent = "Keep talking until " + them + " has everything they need. When you're both done, give " + them + " feedback.";
+    $("fbAsk").hidden = false; return;
   } else if (!traveller && replied){
     $("fbTitle").textContent = "Give feedback to " + them;
     $("fbIntro").textContent = "When the talk is finished, tell " + them + " how it went. Be kind and specific. Quote their words if you can.";
