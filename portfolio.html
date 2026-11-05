@@ -138,7 +138,8 @@ function overview(list, plans){
     STEPS.map(function(s){ return '<th class="c">' + s[1].split(" · ")[0] + "</th>"; }).join("") + "<th>Quiz (best)</th><th>Confidence</th></tr></thead><tbody>" +
     list.map(function(l){ return '<tr><td><button class="link" data-n="' + esc(l.name) + '">' + esc(l.name) + "</button></td>" +
       STEPS.map(function(s){ return '<td class="c">' + (l.progress[s[0]] ? '<span class="tick">✓</span>' : '<span class="dash">·</span>') + "</td>"; }).join("") +
-      "<td>" + esc(l.quiz) + "</td><td>" + esc(l.confidence) + "</td></tr>"; }).join("") + "</tbody></table></div>" +
+      "<td>" + esc(l.quiz) + "</td><td>" + esc(l.confidence) + "</td></tr>"; }).join("") +
+    (list.length ? "" : '<tr><td colspan="8" class="muted" style="padding:14px 6px">No learners yet. When someone joins TRIP on the Start here page, they appear here.</td></tr>') + "</tbody></table></div>" +
     '<p class="muted small">Steps: 1 Activation · 2 Demonstration · 3 Application · 4 Integration · 5 Unit check</p></section>' +
     '<section class="panel"><h2>Trip plans waiting for you</h2>' + ((plans || []).length ? (plans || []).map(function(x){
       return '<div class="row" style="justify-content:space-between;border-top:1px dotted var(--line);padding-top:8px"><span><b style="font-weight:500">' + esc(x.id) + "</b> · " + esc(x.learner) + " · " + esc(x.place) +
