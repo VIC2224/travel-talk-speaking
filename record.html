@@ -132,10 +132,10 @@ var DECKS = {
   }
 };
 var MODELS = [
-  [["R","Your room is fourteen-oh-eight on the fourteenth floor, breakfast is from six-thirty to nine-thirty, and check-out is at twelve noon. Is there anything else?",""],
-   ["G","Sorry, could you say the breakfast time again, please?","asked when unclear"],
-   ["R","Of course. Breakfast is from six-thirty to nine-thirty.",""],
-   ["G","So, room fourteen-oh-eight, and check-out at twelve, right?","checked details"],
+  [["R","Your room is fourteen-oh-eight on the fourteenth floor, and breakfast is from six-thirty to nine-thirty. Is there anything else?",""],
+   ["G","Yes. What time is check-out, please?","asked about a missing detail"],
+   ["R","Check-out is at twelve noon.",""],
+   ["G","So, room fourteen-oh-eight, breakfast from six-thirty, and check-out at twelve, right?","checked details"],
    ["R","That's right.",""],
    ["G","Great. Thank you very much.","left with the right details"]],
   [["R","Thank you, Ms Lee. I have you in a single room for one night.",""],
@@ -159,7 +159,7 @@ var LINKS = [
 ];
 var GOALS = ["Leave the desk with every detail you need","Sort out a booking problem politely","Ask for what you want"];
 var CHECKS = [
-  ["I asked when something was fast or unclear.","I checked at least two details by saying them back, on my own.","Every detail I said back was right (or I fixed it)."],
+  ["I asked about a detail that was missing or not clear.","I checked at least two details by saying them back, on my own.","Every detail I said back was right (or I fixed it)."],
   ["I started politely (Sorry... / Excuse me... / I think there's a mistake...).","I said the fact clearly (I booked...).","I asked for it to be fixed, and it was fixed."],
   ["I asked politely (Could I...? / Would it be possible...?).","After the first \"no\", I asked about or suggested another option.","I ended with something useful."]
 ];
